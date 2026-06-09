@@ -1,13 +1,15 @@
 # CLAUDE.md
 
-Navigation map for the ITSON Calculus 3 *solucionario* generator. This is a MAP,
+Navigation map for `academic-solution-engine`, a long-term academic math solution
+generator. Current v3.2 scope: ITSON Calculus 3 *solucionario* generation. This is a MAP,
 **not** a spec. The authoritative rules live in `bible/*_v3_2.md`. When this file
 and a bible file disagree, the bible wins. Read the relevant bible file before
 implementing any stage. Do not paraphrase a rule from memory — open the file.
 
 ## What this is
-A CLI tool: structured JSON exercises → SymPy-solved results → Jinja2/LaTeX → PDF
-solution manuals. Single user, Spanish (es-MX) output. See `bible/99_project_overview_v3_2.md`.
+For current v3.2 / Phase 1, this is a CLI tool: structured JSON calculus exercises
+→ SymPy-solved integral results → Jinja2/LaTeX → PDF solution manuals. Single user,
+Spanish (es-MX) output. See `bible/99_project_overview_v3_2.md`.
 
 ## Pipeline (Phase 1)
 Input JSON → Validate → Expression Cleaner → Integral Solver (per-exercise) →
