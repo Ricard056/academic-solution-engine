@@ -1,0 +1,46 @@
+# ── Generated derivatives — never precious, always regenerable (bible 55) ──
+/outputs/*
+!/outputs/.gitkeep
+*.pdf
+*_extended.json
+
+# ── LaTeX compile litter (from pdflatex in render/latex.py) ──
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# ── User input JSON — read-only at runtime, not versioned here ──
+#    Keep the folder, ignore its contents. Real assignments live elsewhere.
+/inputs/*
+!/inputs/.gitkeep
+
+# ── Private scratch: experimental inputs/outputs/notes — NEVER committed ──
+/_local/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ── Tooling / environments ──
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Editor / OS noise ──
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

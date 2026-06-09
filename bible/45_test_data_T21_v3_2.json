@@ -1,0 +1,223 @@
+{
+  "metadata": {
+    "institution": "itson",
+    "course_code": "c3",
+    "course": "Calculus 3",
+    "assignment": {
+      "type": "hw",
+      "number": 21,
+      "year": 2025,
+      "month": 6,
+      "iteration": 5
+    }
+  },
+
+  "display_default": {
+    "show_input": false,
+    "decimal_places": 4
+  },
+
+  "exercises": [
+    {
+      "id": 1,
+      "id_letter": "a",
+      "type": "integral",
+      "function": "2*x*y",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "x + y"},
+        {"var": "y", "lower": "x", "upper": "2*x"},
+        {"var": "x", "lower": "0", "upper": "1"}
+      ]
+    },
+    {
+      "id": 1,
+      "id_letter": "b",
+      "type": "integral",
+      "function": "y*z",
+      "integrals": [
+        {"var": "y", "lower": "0", "upper": "x"},
+        {"var": "z", "lower": "0", "upper": "sqrt(9 - x**2)"},
+        {"var": "x", "lower": "0", "upper": "3"}
+      ]
+    },
+    {
+      "id": 1,
+      "id_letter": "c",
+      "type": "integral",
+      "function": "z * sin(y)",
+      "integrals": [
+        {"var": "x", "lower": "0", "upper": "sqrt(4 - z**2)"},
+        {"var": "z", "lower": "0", "upper": "2"},
+        {"var": "y", "lower": "0", "upper": "pi"}
+      ]
+    },
+    {
+      "id": 2,
+      "id_letter": "a",
+      "type": "integral",
+      "quantity": "V",
+      "function": "1",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "2 - (1/3)*x - (1/2)*y"},
+        {"var": "y", "lower": "0", "upper": "-2/3*x + 4"},
+        {"var": "x", "lower": "0", "upper": "6"}
+      ]
+    },
+    {
+      "id": 2,
+      "id_letter": "b",
+      "type": "integral",
+      "quantity": "V",
+      "function": "r",
+      "coordinate_system": "cylindrical",
+      "integrals": [
+        {"var": "z", "lower": "r**2", "upper": "16 - r**2"},
+        {"var": "r", "lower": "0", "upper": "sqrt(8)"},
+        {"var": "theta", "lower": "0", "upper": "2*pi"}
+      ]
+    },
+    {
+      "id": 3,
+      "id_letter": "a",
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "1 - y"},
+        {"var": "x", "lower": "0", "upper": "y**2"},
+        {"var": "y", "lower": "0", "upper": "1"}
+      ]
+    },
+    {
+      "id": 3,
+      "id_letter": "b",
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {"var": "y", "lower": "sqrt(x)", "upper": "1 - z"},
+        {"var": "z", "lower": "0", "upper": "1 - sqrt(x)"},
+        {"var": "x", "lower": "0", "upper": "1"}
+      ]
+    },
+    {
+      "id": 3,
+      "id_letter": "c",
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {"var": "y", "lower": "sqrt(x)", "upper": "1 - z"},
+        {"var": "x", "lower": "0", "upper": "(1 - z)**2"},
+        {"var": "z", "lower": "0", "upper": "1"}
+      ]
+    },
+    {
+      "id": 3,
+      "id_letter": "d",
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {"var": "x", "lower": "0", "upper": "y**2"},
+        {"var": "z", "lower": "0", "upper": "1 - y"},
+        {"var": "y", "lower": "0", "upper": "1"}
+      ]
+    },
+    {
+      "id": 3,
+      "id_letter": "e",
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {"var": "x", "lower": "0", "upper": "y**2"},
+        {"var": "y", "lower": "0", "upper": "1 - z"},
+        {"var": "z", "lower": "0", "upper": "1"}
+      ]
+    },
+    {
+      "id": 4,
+      "id_letter": "a",
+      "type": "integral",
+      "quantity": "V",
+      "function": "r",
+      "coordinate_system": "cylindrical",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "4 - r*sin(theta)"},
+        {"var": "r", "lower": "0", "upper": "4"},
+        {"var": "theta", "lower": "0", "upper": "(1/2)*pi"}
+      ]
+    },
+    {
+      "id": 4,
+      "id_letter": "b",
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "4 - y"},
+        {"var": "y", "lower": "0", "upper": "sqrt(16 - x**2)"},
+        {"var": "x", "lower": "0", "upper": "4"}
+      ]
+    },
+    {
+      "id": 5,
+      "id_letter": "a",
+      "type": "integral",
+      "function": "(x*y + 1)**3 * z",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "1"},
+        {"var": "y", "lower": "0", "upper": "1"},
+        {"var": "x", "lower": "1", "upper": "2"}
+      ]
+    },
+    {
+      "id": 5,
+      "id_letter": "b",
+      "type": "integral",
+      "function": "x*z*sin(y*z)",
+      "integrals": [
+        {"var": "y", "lower": "0", "upper": "pi/2"},
+        {"var": "z", "lower": "0", "upper": "pi/2"},
+        {"var": "x", "lower": "2", "upper": "3"}
+      ]
+    },
+    {
+      "id": 5,
+      "id_letter": "c",
+      "type": "integral",
+      "function": "x + y + z",
+      "integrals": [
+        {"var": "x", "lower": "-1", "upper": "1"},
+        {"var": "y", "lower": "-2", "upper": "2"},
+        {"var": "z", "lower": "2", "upper": "4"}
+      ]
+    },
+    {
+      "id": 5,
+      "id_letter": "d",
+      "type": "integral",
+      "function": "cos(x / y)",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "y"},
+        {"var": "x", "lower": "0", "upper": "y**2"},
+        {"var": "y", "lower": "0", "upper": "pi/2"}
+      ],
+      "display_override": {
+        "show_input": true,
+        "show_symbolic": true,
+        "show_numeric": true,
+        "decimal_places": 2
+      }
+    },
+    {
+      "id": 5,
+      "id_letter": "e",
+      "type": "integral",
+      "function": "3**z * x**2",
+      "integrals": [
+        {"var": "z", "lower": "0", "upper": "x*y"},
+        {"var": "y", "lower": "1", "upper": "x"},
+        {"var": "x", "lower": "1", "upper": "2"}
+      ],
+      "display_override": {
+        "show_symbolic": false
+      }
+    }
+  ]
+}

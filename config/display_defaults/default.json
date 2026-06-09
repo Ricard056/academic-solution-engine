@@ -1,0 +1,19 @@
+{
+  "_comment": "Hardcoded display defaults (v3.2). Input JSON display_default merges on top of this for DISPLAY fields only. file_naming_mode is a PROCESSING default, not a display field: its source of truth is metadata.file_naming_mode (see 55/80); the value here is the fallback used only when metadata omits it, and it is NOT merged into per-exercise render config. Decimal/unit formatting is performed by the Render Adapter using decimal_places and default_units; the solver and Extended JSON store only raw values.",
+  "_version": "3.2",
+
+  "file_naming_mode": "production",
+
+  "show_input": true,
+  "show_symbolic": true,
+  "show_numeric": true,
+  "show_quantity": true,
+  "decimal_places": 4,
+  "default_units": "u",
+  "language": "es-MX",
+
+  "show_component_quantity": true,
+  "show_component_symbolic": true,
+  "show_component_operation": true,
+  "show_component_total": true
+}

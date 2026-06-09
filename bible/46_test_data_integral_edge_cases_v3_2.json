@@ -1,0 +1,255 @@
+{
+  "metadata": {
+    "institution": "itson",
+    "course_code": "c3",
+    "course": "Calculus 3",
+    "assignment": {
+      "type": "test",
+      "number": 9001,
+      "year": 2025,
+      "month": 7,
+      "iteration": 1
+    },
+    "file_naming_mode": "testing",
+    "notes": "Supplementary Phase 1 (v3.2) edge cases for render adapter, id_component, id_output, quantity override, display override, cleaner behavior, and generic 1D support. Expected render-model values for ex1, ex7, ex5, ex6, ex9 are defined in 47_golden_expected_v3_2.md."
+  },
+  "display_default": {
+    "show_input": true,
+    "show_symbolic": true,
+    "show_numeric": true,
+    "show_quantity": true,
+    "decimal_places": 4
+  },
+  "display_integral": {
+    "show_input": true
+  },
+  "exercises": [
+    {
+      "id": 1,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "z",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "integral",
+      "function": "x + y",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "integral",
+      "quantity": "M",
+      "function": "2*x*y",
+      "integrals": [
+        {
+          "var": "z",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ],
+      "display_override": {
+        "units_override": "kg"
+      }
+    },
+    {
+      "id": 5,
+      "id_component": 1,
+      "type": "integral",
+      "quantity": "A",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "x"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "id_component": 2,
+      "type": "integral",
+      "quantity": "A",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "2 - x"
+        },
+        {
+          "var": "x",
+          "lower": "1",
+          "upper": "2"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "id_output": 1,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "id_output": 2,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "1",
+          "upper": "2"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "integral",
+      "function": "x*y",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "2"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "2"
+        }
+      ],
+      "display_override": {
+        "show_symbolic": false,
+        "show_numeric": true,
+        "decimal_places": 2,
+        "quantity_label": "Q",
+        "units_override": "C"
+      }
+    },
+    {
+      "id": 8,
+      "type": "integral",
+      "function": "ln(x) + sin^2(y)",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "pi/2"
+        },
+        {
+          "var": "x",
+          "lower": "1",
+          "upper": "exp(1)"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "integral",
+      "function": "2x",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "integral",
+      "quantity": "R",
+      "function": "x^2",
+      "integrals": [
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    }
+  ]
+}
