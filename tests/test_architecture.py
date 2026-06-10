@@ -1,7 +1,45 @@
 """Architecture-boundary tests.
 
-Scaffold placeholder — no tests implemented yet.
-Will assert that solver modules (src/solucionario/solvers/) do NOT import the
-render/formatting modules, because solvers must not format decimals or derive
-units. Reference: bible/90_phase1_scope_v3_2.md, bible/85_render_adapter_and_jinja2_spec_v3_2.md.
+Solvers emit raw mathematical data only (bible 90/75/85): formatting belongs
+to the Render Adapter. Solver modules therefore must not import the render
+package or formatting machinery (decimal). The guard is AST-based so it
+catches any import form without executing the modules.
 """
+
+import ast
+from pathlib import Path
+
+SOLVERS_DIR = Path(__file__).resolve().parent.parent / "src" / "solucionario" / "solvers"
+
+
+def iter_imported_modules(path: Path):
+    """Yield the dotted module name of every import in the file."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                yield alias.name
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:  # relative import — resolve against the package
+                base = "solucionario.solvers" if node.level == 1 else "solucionario"
+                yield f"{base}.{node.module}" if node.module else base
+            elif node.module:
+                yield node.module
+
+
+def is_forbidden(module: str) -> bool:
+    segments = module.split(".")
+    return segments[0] == "decimal" or "render" in segments
+
+
+def test_solver_modules_do_not_import_render_or_formatting():
+    solver_files = sorted(SOLVERS_DIR.glob("*.py"))
+    assert solver_files, f"no solver modules found under {SOLVERS_DIR}"
+
+    offenders = [
+        f"{path.name} imports {module}"
+        for path in solver_files
+        for module in iter_imported_modules(path)
+        if is_forbidden(module)
+    ]
+    assert offenders == []
