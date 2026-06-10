@@ -1,7 +1,49 @@
-"""Decimal formatting (Decimal + ROUND_HALF_UP) and unit derivation.
+"""Render-time decimal formatting (bible 85, Decimal Formatting Rule).
 
-Scaffold placeholder — no implementation yet.
-Decimals MUST use decimal.Decimal with ROUND_HALF_UP; never round() or f"{v:.nf}".
-Reference: bible/85_render_adapter_and_jinja2_spec_v3_2.md
-(Decimal Formatting Rule, Unit Derivation Rule).
+Decimals MUST use decimal.Decimal with ROUND_HALF_UP; never round() or
+f"{v:.nf}" — both are round-half-to-even and silently violate the contract.
+The recipe is bible 85 verbatim: Decimal(str(value)) — the float's shortest
+repr, so artifacts like 2.675 (binary ~2.67499...) format as "2.68" —
+quantized to exactly decimal_places digits, trailing zeros kept.
+
+Render-only: pure value -> str helpers consumed by the render adapter when
+building render-model fields (decimal_string, total_decimal_string,
+operation_decimal_string). Nothing here writes to dicts; Extended JSON never
+contains formatted decimals (schema-closure test in test_extended_json.py).
+This module imports stdlib decimal only (AST-guarded by test_formatting.py).
+
+Unit derivation (bible 85, Unit Derivation Rule) is NOT implemented yet —
+it arrives with the render adapter milestone.
 """
+
+from decimal import ROUND_HALF_UP, Decimal
+
+
+def format_decimal(value, decimal_places: int) -> str:
+    """Fixed-point string with exactly decimal_places digits, ROUND_HALF_UP.
+
+    decimal_places=0 yields no decimal point ("3"). Raises ValueError for an
+    invalid decimal_places (negative, bool, or non-int) and for non-finite
+    values (NaN, Infinity, -Infinity) — they must never format silently.
+    """
+    if (
+        isinstance(decimal_places, bool)
+        or not isinstance(decimal_places, int)
+        or decimal_places < 0
+    ):
+        raise ValueError(
+            f"decimal_places must be a non-negative int, got {decimal_places!r}"
+        )
+
+    decimal_value = Decimal(str(value))
+    if not decimal_value.is_finite():
+        raise ValueError(f"cannot format non-finite value: {value!r}")
+
+    quantum = Decimal(1).scaleb(-decimal_places)
+    return str(decimal_value.quantize(quantum, rounding=ROUND_HALF_UP))
+
+
+def format_operation_decimal_string(values, decimal_places: int) -> str:
+    """Formatted parts joined with " + " — the Phase 1 sum join used for the
+    Total line's operation_decimal_string (bible 85)."""
+    return " + ".join(format_decimal(value, decimal_places) for value in values)
