@@ -43,3 +43,18 @@ def test_solver_modules_do_not_import_render_or_formatting():
         if is_forbidden(module)
     ]
     assert offenders == []
+
+
+def test_render_adapter_does_not_compute_math():
+    """The adapter copies math from results.component and formats — it never
+    computes: no SymPy, no solver imports, no aggregation imports (bible 85,
+    aggregation boundary)."""
+    adapter_path = SOLVERS_DIR.parent / "render" / "adapter.py"
+    offenders = [
+        module
+        for module in iter_imported_modules(adapter_path)
+        if module.split(".")[0] == "sympy"
+        or module.startswith("solucionario.solvers")
+        or module.startswith("solucionario.aggregation")
+    ]
+    assert offenders == []
