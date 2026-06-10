@@ -49,7 +49,12 @@ def solve_integral(exercise: dict) -> dict:
             result = sympy.integrate(result, limit)
 
         numeric_value = _finite_float(result)
-        return success_result(problem_latex, sympy.latex(result), numeric_value)
+        results = success_result(problem_latex, sympy.latex(result), numeric_value)
+        # In-memory handoff to the Component Aggregation stage (bible 90):
+        # a sympify-able string, never serialized — the Extended JSON stage
+        # strips underscore-prefixed keys (bible 75 stays canonical).
+        results["_symbolic_result"] = str(result)
+        return results
     except Exception as exc:
         return error_result(f"Cannot solve integral: {exc}")
 

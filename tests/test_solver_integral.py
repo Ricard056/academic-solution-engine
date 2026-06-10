@@ -110,7 +110,16 @@ def test_no_automatic_jacobian():
 
 def test_success_result_has_exactly_the_bible_75_keys():
     result = solve_integral(integral_exercise("x**2", [("x", "0", "1")]))
-    assert set(result) == {"problem_latex", "solution_latex", "numeric_value"}
+    # _symbolic_result is the internal in-memory handoff to Component
+    # Aggregation; the Extended JSON stage strips underscore-prefixed keys
+    # before serialization, keeping bible 75 output canonical.
+    assert set(result) == {
+        "problem_latex",
+        "solution_latex",
+        "numeric_value",
+        "_symbolic_result",
+    }
+    assert result["_symbolic_result"] == "1/3"  # sympify-able plain string
     assert "status" not in result
     assert "decimal_string" not in result
     assert "units" not in result
@@ -155,6 +164,7 @@ def assert_error_result(result):
     assert result["solution_latex"] == ERROR_SOLUTION_LATEX
     assert result["error_message"]
     assert "numeric_value" not in result
+    assert "_symbolic_result" not in result  # internal handoff is success-only
 
 
 def test_invalid_expression_is_error():
