@@ -1,3 +1,91 @@
-{# Scaffold placeholder. No template logic yet.
-   The minimal solucionario_integrales.tex.j2 is specified in
-   bible/85_render_adapter_and_jinja2_spec_v3_2.md ("Minimal solucionario_integrales.tex.j2"). #}
+{% extends "base.tex.j2" %}
+
+{% block body %}
+
+\begin{center}
+{\Large \textbf{ {{ document.title }} }}\\
+{\large {{ document.subtitle }}}\\
+{% if document.course %}{{ document.course }}{% endif %}
+\end{center}
+
+\vspace{0.5cm}
+
+\section*{Resultados}
+
+{% for item in items %}
+
+{% if item.kind == "error" %}
+\textbf{ {{ item.exercise_label }}) } \textcolor{red}{ {{ item.message }} }
+
+{% elif item.kind == "standard" %}
+\textbf{ {{ item.exercise_label }}) }
+
+{% if item.show_input %}
+\[
+{{ item.problem_latex }}
+\]
+{% endif %}
+
+{% if item.show_symbolic and item.show_numeric %}
+\[
+{% if item.show_quantity %}{{ item.quantity_label }} = {% endif %}{{ item.solution_latex }} = {{ item.decimal_string }}\, \mathrm{ {{ item.units }} }
+\]
+{% elif item.show_symbolic %}
+\[
+{% if item.show_quantity %}{{ item.quantity_label }} = {% endif %}{{ item.solution_latex }}\, \mathrm{ {{ item.units }} }
+\]
+{% elif item.show_numeric %}
+\[
+{% if item.show_quantity %}{{ item.quantity_label }} = {% endif %}{{ item.decimal_string }}\, \mathrm{ {{ item.units }} }
+\]
+{% endif %}
+
+{% elif item.kind == "component_group" %}
+\textbf{ {{ item.exercise_label }}) }
+
+{% for component in item.components %}
+\[
+\text{Componente {{ component.id_component }}: }
+{% if component.show_component_quantity %}{{ component.quantity_label }} = {% endif %}
+{{ component.solution_latex }}
+{% if component.show_numeric %} = {{ component.decimal_string }}{% endif %}
+\, \mathrm{ {{ component.units }} }
+\]
+{% endfor %}
+
+{% if item.show_component_total %}
+\[
+\text{Total: }
+{% if item.show_quantity %}{{ item.quantity_label }} = {% endif %}
+{% if item.show_component_symbolic %}{{ item.operation_latex }} = {% endif %}
+{{ item.total_latex }}
+{% if item.show_component_operation %} = {{ item.operation_decimal_string }}{% endif %}
+{% if item.show_numeric %} = {{ item.total_decimal_string }}{% endif %}
+\, \mathrm{ {{ item.units }} }
+\]
+{% endif %}
+
+{% elif item.kind == "output_group" %}
+\textbf{ {{ item.exercise_label }}) }
+
+{% for output in item.outputs %}
+{% if output.show_symbolic and output.show_numeric %}
+\[
+\text{ {{ output.output_label }}: }{% if output.show_quantity %}{{ output.quantity_label }} = {% endif %}{{ output.solution_latex }} = {{ output.decimal_string }}\, \mathrm{ {{ output.units }} }
+\]
+{% elif output.show_symbolic %}
+\[
+\text{ {{ output.output_label }}: }{% if output.show_quantity %}{{ output.quantity_label }} = {% endif %}{{ output.solution_latex }}\, \mathrm{ {{ output.units }} }
+\]
+{% elif output.show_numeric %}
+\[
+\text{ {{ output.output_label }}: }{% if output.show_quantity %}{{ output.quantity_label }} = {% endif %}{{ output.decimal_string }}\, \mathrm{ {{ output.units }} }
+\]
+{% endif %}
+{% endfor %}
+
+{% endif %}
+
+{% endfor %}
+
+{% endblock %}
