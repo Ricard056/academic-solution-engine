@@ -1,9 +1,11 @@
-"""Tests for fileio M7B1: naming + read helpers (bible 55/80/75).
+"""Tests for fileio: naming + read helpers (M7B1) and output writing +
+pdflatex wrapper (M7B3). Bible 55/80/75.
 
 Locks the slot/underscore naming rules, production/testing modes with a
-deterministic injected `now`, UTC normalization for aware datetimes,
-processed_info shape, read-only input behavior, and the M7B1 scope itself
-(no write helpers, no outputs/ management, no subprocess imports).
+deterministic injected `now`, UTC normalization, processed_info shape,
+read-only input behavior, dumb UTF-8 writers (no mutation/enrichment/
+validation), exact pdflatex argv/cwd via injected runners, failure behavior
+that never deletes outputs, and the module's import surface.
 """
 
 import ast
@@ -11,16 +13,23 @@ import copy
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from solucionario import fileio
 from solucionario.fileio import (
     DISPLAY_DEFAULTS_PATH,
+    OUTPUTS_DIR,
+    PdfCompilationError,
+    compile_pdf,
     filename_base,
     load_display_defaults,
+    output_paths,
     processed_info,
     read_input_json,
+    write_extended_json,
+    write_tex,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -186,15 +195,156 @@ def test_load_display_defaults_reads_current_config():
 
 
 # ---------------------------------------------------------------------------
-# M7B1 scope locks (constraint 3)
+# Output paths and writers (M7B3)
 # ---------------------------------------------------------------------------
 
-def test_no_write_helpers_exist_yet():
-    for forbidden in ("write_extended_json", "write_tex", "compile_pdf"):
-        assert not hasattr(fileio, forbidden)
+def test_output_paths_names_and_default_dir():
+    paths = output_paths("itson_c3_hw_16", Path("X"))
+    assert paths == {
+        "extended_json": Path("X") / "itson_c3_hw_16_extended.json",
+        "tex": Path("X") / "itson_c3_hw_16.tex",
+        "pdf": Path("X") / "itson_c3_hw_16.pdf",
+    }
+    default = output_paths("base")
+    assert default["tex"].parent == OUTPUTS_DIR
+    assert OUTPUTS_DIR.name == "outputs"
 
 
-def test_module_imports_are_read_only_safe():
+def test_output_paths_creates_nothing(tmp_path):
+    target = tmp_path / "not_yet"
+    output_paths("base", target)
+    assert not target.exists()
+
+
+def test_write_extended_json_filename_and_utf8_round_trip(tmp_path):
+    document = {"kind": "extended", "metadata": {"course_display": "Cálculo III"}}
+    path = write_extended_json(document, "itson_c3_hw_16", tmp_path)
+    assert path == tmp_path / "itson_c3_hw_16_extended.json"
+    assert json.loads(path.read_text(encoding="utf-8")) == document
+    assert "Cálculo".encode("utf-8") in path.read_bytes()  # ensure_ascii=False
+
+
+def test_write_extended_json_serializes_the_object_only(tmp_path):
+    document = {"kind": "extended", "exercises": [{"id": 1}]}
+    snapshot = copy.deepcopy(document)
+    path = write_extended_json(document, "base", tmp_path)
+    assert document == snapshot  # no mutation
+    assert json.loads(path.read_text(encoding="utf-8")) == snapshot  # nothing added
+
+
+def test_write_tex_filename_and_utf8_accents(tmp_path):
+    path = write_tex("\\textbf{Cálculo III}", "itson_c3_hw_16", tmp_path)
+    assert path == tmp_path / "itson_c3_hw_16.tex"
+    raw = path.read_bytes()
+    assert b"C\xc3\xa1lculo" in raw  # UTF-8 bytes, not cp1252/UTF-16
+    assert raw.decode("utf-8") == "\\textbf{Cálculo III}"
+
+
+def test_writers_create_missing_output_dir(tmp_path):
+    target = tmp_path / "deep" / "outputs"
+    write_tex("x", "a", target)
+    write_extended_json({}, "a", target)
+    assert (target / "a.tex").is_file()
+    assert (target / "a_extended.json").is_file()
+
+
+def test_writers_overwrite_without_prompting(tmp_path):
+    write_tex("first", "a", tmp_path)
+    write_tex("second", "a", tmp_path)
+    assert (tmp_path / "a.tex").read_text(encoding="utf-8") == "second"
+    write_extended_json({"v": 1}, "a", tmp_path)
+    write_extended_json({"v": 2}, "a", tmp_path)
+    assert json.loads((tmp_path / "a_extended.json").read_text(encoding="utf-8")) == {"v": 2}
+
+
+def test_writers_write_only_the_expected_files(tmp_path):
+    write_tex("x", "a", tmp_path)
+    write_extended_json({}, "a", tmp_path)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["a.tex", "a_extended.json"]
+
+
+# ---------------------------------------------------------------------------
+# compile_pdf (M7B3) — injected runners, no real pdflatex needed
+# ---------------------------------------------------------------------------
+
+def make_runner(record, returncode=0, stdout="", stderr=""):
+    def runner(argv, **kwargs):
+        record.append((argv, kwargs))
+        return SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
+    return runner
+
+
+def test_compile_pdf_exact_argv_and_cwd(tmp_path):
+    tex = tmp_path / "itson_c3_hw_16.tex"
+    tex.write_text("x", encoding="utf-8")
+    record = []
+
+    pdf = compile_pdf(tex, runner=make_runner(record))
+
+    assert pdf == tmp_path / "itson_c3_hw_16.pdf"
+    ((argv, kwargs),) = record
+    assert argv == ["pdflatex", "-interaction=nonstopmode", "itson_c3_hw_16.tex"]
+    assert kwargs["cwd"] == tmp_path  # bare filename + cwd, never shell=True
+    assert kwargs["capture_output"] is True
+    assert kwargs["text"] is True
+
+
+def test_compile_pdf_custom_executable(tmp_path):
+    tex = tmp_path / "a.tex"
+    tex.write_text("x", encoding="utf-8")
+    record = []
+    compile_pdf(tex, runner=make_runner(record), pdflatex=r"C:\MiKTeX\pdflatex.exe")
+    assert record[0][0][0] == r"C:\MiKTeX\pdflatex.exe"
+
+
+def test_compile_pdf_failure_raises_with_context_and_keeps_outputs(tmp_path):
+    tex = write_tex("\\bad", "a", tmp_path)
+    extended = write_extended_json({"kind": "extended"}, "a", tmp_path)
+    runner = make_runner([], returncode=1, stdout="...\n! LaTeX Error: boom\n...")
+
+    with pytest.raises(PdfCompilationError) as excinfo:
+        compile_pdf(tex, runner=runner)
+
+    message = str(excinfo.value)
+    assert "a.tex" in message
+    assert "exit code 1" in message
+    assert "! LaTeX Error: boom" in message
+    # Nothing was deleted or cleaned up (bible 55: keep derivatives).
+    assert tex.is_file()
+    assert extended.is_file()
+
+
+def test_compile_pdf_missing_pdflatex_is_a_clear_error(tmp_path):
+    tex = tmp_path / "a.tex"
+    tex.write_text("x", encoding="utf-8")
+
+    def runner(argv, **kwargs):
+        raise FileNotFoundError(argv[0])
+
+    with pytest.raises(PdfCompilationError, match="pdflatex not found"):
+        compile_pdf(tex, runner=runner)
+
+
+def test_compile_pdf_default_runner_is_monkeypatchable(tmp_path, monkeypatch):
+    tex = tmp_path / "a.tex"
+    tex.write_text("x", encoding="utf-8")
+    record = []
+    monkeypatch.setattr(fileio.subprocess, "run", make_runner(record))
+    pdf = compile_pdf(tex)  # no runner injected: uses subprocess.run
+    assert pdf == tmp_path / "a.pdf"
+    assert record[0][0][1] == "-interaction=nonstopmode"
+
+
+# ---------------------------------------------------------------------------
+# Scope locks
+# ---------------------------------------------------------------------------
+
+def test_output_api_surface():
+    for name in ("output_paths", "write_extended_json", "write_tex", "compile_pdf"):
+        assert callable(getattr(fileio, name))
+
+
+def test_module_import_surface():
     tree = ast.parse(Path(fileio.__file__).read_text(encoding="utf-8"))
     imported = set()
     for node in ast.walk(tree):
@@ -202,7 +352,9 @@ def test_module_imports_are_read_only_safe():
             imported |= {alias.name.split(".")[0] for alias in node.names}
         elif isinstance(node, ast.ImportFrom):
             imported.add((node.module or "").split(".")[0])
-    assert imported == {"json", "datetime", "pathlib"}  # no subprocess/os/shutil
+    # subprocess exists solely for compile_pdf; no os/shutil, and no
+    # render/jinja2 (writers never render templates).
+    assert imported == {"json", "datetime", "pathlib", "subprocess"}
 
 
 def test_no_outputs_directory_interaction(tmp_path):

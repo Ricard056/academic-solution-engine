@@ -1,9 +1,19 @@
-"""File handling — M7B1: read helpers and file naming only.
+"""File handling: read-only inputs, naming modes, output writes, pdflatex.
 
-Inputs are read-only (bible 55): this module never moves, renames, modifies,
-or deletes anything. Output writing, outputs/ management, and the pdflatex
-wrapper arrive in M7B3 — no write helper exists here yet, and the module
-imports no subprocess/os machinery (locked by tests/test_fileio.py).
+Inputs are read-only (bible 55): nothing here ever moves, renames, modifies,
+or deletes an input file — input paths never even reach the writers. Outputs
+are disposable derivatives written ONLY into an explicit output directory
+(default: the project's outputs/), overwritten without prompting, and never
+cleaned up (not even on pdflatex failure — they are useful for debugging).
+
+The writers are deliberately dumb: write_extended_json serializes exactly
+the object it is given (no mutation, enrichment, validation, purity cleanup,
+or added fields) and write_tex writes an already-rendered string (it never
+renders templates). Document-level hard-stop ordering — validate/process
+first, write after — is the caller's wiring (M7B4), not enforced here.
+
+subprocess usage is isolated to compile_pdf (argv list, never shell=True);
+render/latex.py stays string-only.
 
 Naming (bible 80/55): slots <institution>_<course_code>_<type>_<number>,
 absent optional slots omitted, single-underscore joins. The naming-mode
@@ -18,6 +28,7 @@ before any formatting with a trailing "Z"; a naive `now` is used as-is
 """
 
 import json
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,6 +38,11 @@ PROCESSED_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"  # bible 75 example shape
 DISPLAY_DEFAULTS_PATH = (
     Path(__file__).resolve().parents[2] / "config" / "display_defaults" / "default.json"
 )
+OUTPUTS_DIR = Path(__file__).resolve().parents[2] / "outputs"
+
+
+class PdfCompilationError(RuntimeError):
+    """pdflatex failed or is unavailable; generated outputs are left intact."""
 
 
 def _format_number(value) -> str:
@@ -98,3 +114,91 @@ def load_display_defaults() -> dict:
     """Load the hardcoded display defaults template (bible 50). Read-only;
     merging belongs to display.py, never here."""
     return json.loads(DISPLAY_DEFAULTS_PATH.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Output writing + pdflatex (M7B3)
+# ---------------------------------------------------------------------------
+
+def output_paths(filename_base: str, output_dir=OUTPUTS_DIR) -> dict:
+    """Paths of the three outputs sharing one filename_base (bible 80/55).
+
+    Pure path arithmetic: creates no directories, touches nothing.
+    """
+    directory = Path(output_dir)
+    return {
+        "extended_json": directory / f"{filename_base}_extended.json",
+        "tex": directory / f"{filename_base}.tex",
+        "pdf": directory / f"{filename_base}.pdf",
+    }
+
+
+def write_extended_json(
+    extended_json: dict, filename_base: str, output_dir=OUTPUTS_DIR
+) -> Path:
+    """Write <filename_base>_extended.json (UTF-8, readable JSON).
+
+    Serializes exactly the object it is given — no mutation, no enrichment,
+    no validation, no added fields, no purity cleanup (those are upstream
+    guarantees). Creates the output directory if missing; overwrites
+    silently (bible 55). Returns the written path.
+    """
+    path = output_paths(filename_base, output_dir)["extended_json"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(extended_json, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def write_tex(tex_string: str, filename_base: str, output_dir=OUTPUTS_DIR) -> Path:
+    """Write <filename_base>.tex with explicit UTF-8 (accented es-MX strings
+    must survive byte-for-byte). Receives an already-rendered string — never
+    renders templates. Creates the output directory if missing; overwrites
+    silently. Returns the written path."""
+    path = output_paths(filename_base, output_dir)["tex"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(tex_string, encoding="utf-8")
+    return path
+
+
+def compile_pdf(tex_path, *, runner=None, pdflatex: str = "pdflatex") -> Path:
+    """Compile one generated .tex into a PDF next to it.
+
+    Runs ``pdflatex -interaction=nonstopmode <name>.tex`` as an argv list
+    (never shell=True) with cwd set to the tex file's parent, passing the
+    bare filename. Returns the expected PDF path when the return code is 0;
+    no existence check is performed (an injected runner produces no real
+    file, and nonstopmode reports failure through the return code).
+
+    On failure raises PdfCompilationError with the return code and the tail
+    of pdflatex output. Never deletes or cleans up anything — .tex/.json/
+    .aux/.log outputs are disposable derivatives kept for debugging
+    (bible 55). ``runner`` is an injection point for tests (defaults to
+    subprocess.run).
+    """
+    tex_path = Path(tex_path)
+    run = runner if runner is not None else subprocess.run
+    argv = [pdflatex, "-interaction=nonstopmode", tex_path.name]
+    try:
+        completed = run(argv, cwd=tex_path.parent, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise PdfCompilationError(
+            f"pdflatex not found ({pdflatex!r}) — is MiKTeX/TeX Live installed "
+            "and on PATH?"
+        ) from exc
+    if completed.returncode != 0:
+        raise PdfCompilationError(
+            f"pdflatex failed for {tex_path.name} "
+            f"(exit code {completed.returncode}):\n{_output_tail(completed)}"
+        )
+    return tex_path.with_suffix(".pdf")
+
+
+def _output_tail(completed, limit: int = 25) -> str:
+    """The last lines of pdflatex output (errors go to stdout)."""
+    lines = (completed.stdout or "").splitlines()[-limit:]
+    if completed.stderr:
+        lines += ["--- stderr ---", *completed.stderr.splitlines()[-limit:]]
+    return "\n".join(lines)
