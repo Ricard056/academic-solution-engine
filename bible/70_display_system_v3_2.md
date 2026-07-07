@@ -10,6 +10,8 @@
 > config (P10). v3.1 baseline: `decimal_places`/`default_units` consumed by the
 > adapter; `show_interpretations`, `show_id_component_process`,
 > `show_id_component_accumulative` removed from Phase 1; component fields wired.
+> **Phase 1.1 amendment**: nothing-to-show clarification for symbolic-only
+> results (see Implementation Notes).
 
 ---
 
@@ -328,4 +330,8 @@ These two fields are part of the Phase 1 contract (see 90_phase1_scope_v3_2.md,
   baked into the render model so the template never merges anything
 - Consider warning if `show_symbolic: false` AND `show_numeric: false` (nothing
   to show). Phase 1 does not surface this as a structured warning (see
-  90_phase1_scope_v3_2.md, deferred `warnings` channel)
+  90_phase1_scope_v3_2.md, deferred `warnings` channel). A symbolic-only result
+  (`numeric_value: null`, see 75) with `show_symbolic: false` reaches this same
+  nothing-to-show outcome — its `show_numeric` resolves to false (85,
+  Numeric-Availability Resolution) — and renders an empty result body; warnings
+  remain deferred

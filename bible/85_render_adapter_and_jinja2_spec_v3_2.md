@@ -10,6 +10,8 @@
 > (P12); aggregation boundary noted (P1). v3.1 baseline: adapter owns all decimal
 > formatting and unit derivation; document labels via explicit maps; closed render
 > contract; StrictUndefined in dev/test; component display fields wired.
+> **Phase 1.1 amendment**: Numeric-Availability Resolution — symbolic-only
+> results (`numeric_value: null`) resolve `show_numeric` off in the adapter.
 
 ---
 
@@ -174,6 +176,25 @@ Render-model decimal fields and their sources:
 | `decimal_string` | `results.numeric_value` | per item / component / output |
 | `total_decimal_string` | `results.component.total_value` | component groups only |
 | `operation_decimal_string` | each component's `numeric_value` | join formatted parts with `" + "` (Phase 1 sum) |
+
+When `results.numeric_value` is `null`, no decimal is produced — see
+Numeric-Availability Resolution below.
+
+### Numeric-Availability Resolution
+
+In the render model, `show_numeric` is a **resolved visibility flag**:
+`author_requested_numeric AND numeric_value_exists`. It is not the raw author
+preference. When `results.numeric_value` is `null` (symbolic-only success, see
+75_json_output_spec_v3_2.md), the adapter resolves that render item's
+`show_numeric` to `false` — regardless of the merged display configuration —
+and populates `decimal_string` with the empty string to satisfy the closed
+contract. The template never branches on nullness; it only reads the
+already-resolved flags. This applies per output member inside `output_group`
+items. Component groups never reach this rule: a symbolic-only member
+invalidates the group upstream (see 90_phase1_scope_v3_2.md). If the author
+also sets `show_symbolic: false`, the item renders an empty result body — the
+same already-legal outcome as authored `show_symbolic: false` +
+`show_numeric: false` (see 70_display_system_v3_2.md).
 
 ### Unit Derivation Rule
 

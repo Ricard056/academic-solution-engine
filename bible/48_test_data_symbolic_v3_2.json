@@ -1,0 +1,119 @@
+{
+  "metadata": {
+    "institution": "itson",
+    "course_code": "c3",
+    "course": "Calculus 3",
+    "assignment": {
+      "type": "test",
+      "number": 9002,
+      "year": 2026,
+      "month": 7,
+      "iteration": 1
+    },
+    "file_naming_mode": "testing",
+    "notes": "Phase 1.1 symbolic-only contract acceptance data. Ex 1 (planning label S1) and Ex 2 are symbolic-only successes (numeric_value null). Ex 3 (planning label S2) is a component group with one symbolic member - an INTENDED group ERROR. Ex 4 and Ex 5 are divergence guards that must remain ERRORs. Expected render-model values are defined in 49_golden_expected_symbolic_v3_2.md. Bible 46/47 remain the frozen Phase 1 acceptance."
+  },
+  "display_default": {
+    "show_input": true,
+    "show_symbolic": true,
+    "show_numeric": true,
+    "show_quantity": true,
+    "decimal_places": 4
+  },
+  "display_integral": {
+    "show_input": true
+  },
+  "exercises": [
+    {
+      "id": 1,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "a"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "b"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "integral",
+      "function": "k*x^2",
+      "integrals": [
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "id_component": 1,
+      "type": "integral",
+      "quantity": "A",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "x"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "id_component": 2,
+      "type": "integral",
+      "quantity": "A",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "a"
+        },
+        {
+          "var": "x",
+          "lower": "1",
+          "upper": "2"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "integral",
+      "function": "x",
+      "integrals": [
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "inf"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "integral",
+      "function": "1/x",
+      "integrals": [
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    }
+  ]
+}

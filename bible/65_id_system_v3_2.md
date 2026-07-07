@@ -4,6 +4,8 @@
 > value or `"sum"`; any other value makes the whole component group an ERROR (P2);
 > component-quantity uniformity hardened to a group-ERROR rule (P3). References
 > updated to _v3_2.
+> **Phase 1.1 amendment**: component members must produce numeric results (see
+> Component Rules).
 
 ## Core ID Fields
 
@@ -66,6 +68,10 @@ Each solver defines a default operation:
 - All components in the same component group must resolve to the same
   `quantity_label`. If they do not, the whole group renders as one `kind:"error"`
   item.
+- All members must produce numeric results; a symbolic-only member
+  (`numeric_value: null`, see 75_json_output_spec_v3_2.md) makes the whole group
+  a group-level ERROR (see 90_phase1_scope_v3_2.md). Component sums are
+  numeric-only in Phase 1.
 
 ### Example: Multi-Region Integral
 ```json

@@ -8,6 +8,8 @@
 > and `units_override` added to the final display-field contract (P6). v3.1
 > baseline: formatting ownership, coordinate passivity, display-field pruning,
 > tiered validation, golden reference, type vocabulary.
+> **Phase 1.1 amendment**: symbolic-only success contract — `numeric_value: null`
+> (solver guard, aggregation refusal, group collapse; acceptance in 48/49).
 
 ---
 
@@ -30,9 +32,23 @@
   otherwise they auto-infer `R` with bare `u`.
 - Auto-inference of `quantity` and `coordinate_system`
 
+**Symbolic-only successes (Phase 1.1).** An integral whose exact result contains
+free symbolic parameters is a SUCCESS with `numeric_value: null`, not an error.
+ALL of the following must hold:
+1. integration succeeded (no exception);
+2. the result has free symbols;
+3. the result contains no `oo`, `-oo`, `zoo`, or `nan`;
+4. the result is not (and does not contain) an unevaluated `Integral`;
+5. `numeric_value` is `null`;
+6. `solution_latex` is the exact symbolic result.
+Results failing any of these remain errors. Intentional asymmetry: the numeric
+path may still evaluate a symbol-free unevaluated `Integral` numerically; the
+symbolic path never accepts one.
+
 ### Formatting Ownership (v3.1)
 - Solver = LaTeX strings (`problem_latex`, `solution_latex`) + raw float
-  (`numeric_value`) + component math. No rounding, no units.
+  (`numeric_value`) — or `null` for symbolic-only successes — + component math.
+  No rounding, no units.
 - Render Adapter = all formatted decimals (`decimal_string`,
   `total_decimal_string`, `operation_decimal_string`) and `units`.
 - Template = render only; StrictUndefined in dev/test.
@@ -142,7 +158,10 @@ input untouched (see 55) if any of:
 
 If any member of a component or output group fails at the exercise level (cleaner
 or solver error), the entire `(id, id_letter)` group renders as a single
-`kind:"error"` item.
+`kind:"error"` item. Likewise, a component group containing a symbolic-only
+member (`results.numeric_value: null`) renders as a single `kind:"error"` item —
+the adapter MUST apply this collapse (component sums are numeric-only in
+Phase 1).
 
 Error items show a generic Spanish ERROR marker. No detailed classification, no
 debug logging in Phase 1.
@@ -231,6 +250,10 @@ solvers stay per-exercise; aggregation is a separate stage. It:
 2. Computes `total_value` (sum of component `numeric_value`), `total_latex`,
    `operation` (`"sum"`), and `operation_latex` from the sibling components.
 3. Writes the IDENTICAL `results.component` object onto every member of the group.
+
+The stage MUST refuse to aggregate a component group containing any member
+whose `results.numeric_value` is `null` (symbolic-only success); the group
+receives no `results.component`. Component sums are numeric-only in Phase 1.
 
 The Render Adapter NEVER computes component mathematics or symbolic combinations.
 It only groups already-computed results into `component_group` render items,

@@ -105,6 +105,8 @@ or unreliable copy-paste from computational tools.
 | 60_expression_cleaner_v3_2 | Mathematical expression preprocessing |
 | 55_file_handling_v3_2 | File operation safety rules |
 | 50_config_defaults_global_v3_2.json | Machine-readable default display values |
+| 49_golden_expected_symbolic_v3_2 | Expected render-model values for the symbolic contract (Phase 1.1) |
+| 48_test_data_symbolic_v3_2.json | Symbolic-contract test data (Phase 1.1) |
 | 47_golden_expected_v3_2 | Expected render-model values for acceptance |
 | 46_test_data_integral_edge_cases_v3_2.json | Edge-case test data |
 | 45_test_data_T21_v3_2.json | Real assignment test data |

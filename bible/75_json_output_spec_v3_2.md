@@ -9,6 +9,8 @@
 > formatted decimals (`decimal_string`, `total_decimal_string`,
 > `operation_decimal_string`) and `units` are produced by the Render Adapter (see
 > 85_render_adapter_and_jinja2_spec_v3_2.md).
+> **Phase 1.1 amendment**: symbolic-only success contract — `numeric_value` may
+> be `null` (see field description and Symbolic Result below).
 
 ---
 
@@ -87,11 +89,30 @@
 **Field descriptions**:
 - `problem_latex`: LaTeX string showing the integral setup. Produced by the solver via `sympy.latex()`.
 - `solution_latex`: LaTeX string of the exact symbolic result. Produced by the solver.
-- `numeric_value`: Raw, unrounded float. **The solver never rounds or formats.**
+- `numeric_value`: Raw, unrounded float — or `null` when the exact result
+  contains free symbolic parameters and therefore has no finite numeric value.
+  `null` is a symbolic-only SUCCESS, not an error: `solution_latex` is the
+  result. **The solver never rounds or formats.** `numeric_value` is never
+  Infinity or NaN; divergent or indeterminate results remain errors.
 
 **Not stored in Extended JSON** (these are render-model-only, produced by the
 adapter from `numeric_value` + resolved display settings):
 `decimal_string`, `units`. See 85_render_adapter_and_jinja2_spec_v3_2.md.
+
+### Symbolic Result (success, no numeric value)
+
+```json
+"results": {
+  "problem_latex": "\\int_{0}^{a} x \\, dx",
+  "solution_latex": "\\frac{a^{2}}{2}",
+  "numeric_value": null
+}
+```
+
+A result with free symbolic parameters (here `a`) is a normal success. The
+Render Adapter resolves its numeric display off (see
+85_render_adapter_and_jinja2_spec_v3_2.md, Numeric-Availability Resolution);
+no decimal string is ever produced for it.
 
 ### Component Result (when `id_component` exists)
 
@@ -149,6 +170,11 @@ all mathematical):
 
 Decimal renderings of these (`total_decimal_string`, `operation_decimal_string`)
 are produced by the adapter, not stored in Extended JSON. See 85.
+
+Every member of a component group must have a numeric `numeric_value`. A
+symbolic-only member (`numeric_value: null`) makes the whole `(id, id_letter)`
+group a group-level ERROR (see 90_phase1_scope_v3_2.md); `total_value` is
+always a float in Phase 1.
 
 > **Note**: Phase 1 honors only `"sum"`. An absent `component_operation` defaults to
 > `"sum"`; any explicit value other than `"sum"` makes the group an ERROR (see

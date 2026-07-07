@@ -30,6 +30,7 @@ Jinja2/LaTeX → PDF
 | Hardcoded display defaults | `50_config_defaults_global_v3_2.json` |
 | Render Adapter + Jinja2 contract | `85_render_adapter_and_jinja2_spec_v3_2.md` |
 | Golden acceptance values | `47_golden_expected_v3_2.md` |
+| Symbolic-contract acceptance (Phase 1.1) | `48_test_data_symbolic_v3_2.json` / `49_golden_expected_symbolic_v3_2.md` |
 | Test data (real T21 / edge cases) | `45_*.json` / `46_*.json` |
 | Deferred — DO NOT BUILD | `08_*` , `09_*_v3_2.md` |
 
@@ -40,8 +41,9 @@ Jinja2/LaTeX → PDF
    Jacobian, never drives quantity or unit inference. The author writes any
    Jacobian into `function`. (70, 80)
 3. **The solver never formats.** It emits LaTeX strings + a raw unrounded
-   `numeric_value` float only — no rounding, no units. Enforced by
-   `tests/test_architecture.py` (solvers must not import `render`/formatting). (75, 90)
+   `numeric_value` float, or `null` for symbolic-only successes — no rounding,
+   no units. Enforced by `tests/test_architecture.py` (solvers must not import
+   `render`/formatting). (75, 90)
 4. **Component aggregation is a post-solve stage.** It runs after the solver,
    before Extended JSON, summing components per `(id, id_letter)`. Solvers stay
    per-exercise; the adapter never computes totals. (90, 75)
@@ -63,6 +65,8 @@ Jinja2/LaTeX → PDF
 A correct first run matches `47_golden_expected_v3_2.md` for Ex 1, 7, 5, 6, 9 of
 `46` (Ex 9 `function:"2x"` is an INTENDED error — implicit multiplication is
 rejected) and passes the ROUND_HALF_UP rounding guard. (47, 90)
+Phase 1.1 (symbolic-only contract): once implemented, `49_*.md` over `48_*.json`
+must also pass, with 46/47 remaining frozen. (48, 49)
 
 ## Project layout
 - `src/solucionario/` — pipeline stages (`validation`, `cleaner`, `display`,
