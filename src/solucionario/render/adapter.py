@@ -16,6 +16,14 @@ never writes formatted values back into it.
 Error items carry ONE generic Spanish message — solver error_message and
 validate_group() diagnostics are internal and never exposed in the render
 model (bible 90: no detailed classification).
+
+Numeric-Availability Resolution (bible 85, Phase 1.1): show_numeric is a
+RESOLVED visibility flag, author_requested_numeric AND numeric_value_exists.
+A null results.numeric_value (symbolic-only success, bible 75) forces
+show_numeric to False and decimal_string to "" regardless of the merged
+display config, per standard item / per output member. Component groups
+never reach this: aggregation already refuses a group with a null-numeric
+member, so it has no results.component and collapses to one error item.
 """
 
 from solucionario.display import resolve_display, resolve_group_display
@@ -144,23 +152,34 @@ def _error_item(label: str) -> dict:
     return {"kind": "error", "exercise_label": label, "message": ERROR_MESSAGE}
 
 
+def _resolve_numeric(settings: dict, numeric_value, decimal_places: int) -> tuple[bool, str]:
+    """Numeric-Availability Resolution (bible 85): show_numeric is resolved
+    visibility (author_requested AND numeric_value_exists); a null
+    numeric_value forces show_numeric False and decimal_string "" instead of
+    formatting (format_decimal would raise on None)."""
+    if numeric_value is None:
+        return False, ""
+    return _setting(settings, "show_numeric"), format_decimal(numeric_value, decimal_places)
+
+
 def _standard_item(extended_json, display_defaults, exercise) -> dict:
     settings = resolve_display(display_defaults, extended_json, exercise)
     results = exercise["results"]
     quantity_label = resolve_quantity_label(exercise)
+    show_numeric, decimal_string = _resolve_numeric(
+        settings, results["numeric_value"], _setting(settings, "decimal_places")
+    )
     return {
         "kind": "standard",
         "exercise_label": exercise_label(exercise),
         "quantity_label": quantity_label,
         "show_input": _setting(settings, "show_input"),
         "show_symbolic": _setting(settings, "show_symbolic"),
-        "show_numeric": _setting(settings, "show_numeric"),
+        "show_numeric": show_numeric,
         "show_quantity": _setting(settings, "show_quantity"),
         "problem_latex": results["problem_latex"],
         "solution_latex": results["solution_latex"],
-        "decimal_string": format_decimal(
-            results["numeric_value"], _setting(settings, "decimal_places")
-        ),
+        "decimal_string": decimal_string,
         "units": derive_units(quantity_label, settings),
     }
 
@@ -221,6 +240,9 @@ def _output_group_item(extended_json, display_defaults, members, label) -> dict:
         settings = resolve_display(display_defaults, extended_json, member)
         results = member["results"]
         quantity_label = resolve_quantity_label(member)
+        show_numeric, decimal_string = _resolve_numeric(
+            settings, results["numeric_value"], _setting(settings, "decimal_places")
+        )
         outputs.append(
             {
                 "id_output": member["id_output"],
@@ -229,12 +251,10 @@ def _output_group_item(extended_json, display_defaults, members, label) -> dict:
                 "units": derive_units(quantity_label, settings),
                 "show_quantity": _setting(settings, "show_quantity"),
                 "show_symbolic": _setting(settings, "show_symbolic"),
-                "show_numeric": _setting(settings, "show_numeric"),
+                "show_numeric": show_numeric,
                 "problem_latex": results["problem_latex"],
                 "solution_latex": results["solution_latex"],
-                "decimal_string": format_decimal(
-                    results["numeric_value"], _setting(settings, "decimal_places")
-                ),
+                "decimal_string": decimal_string,
             }
         )
     return {"kind": "output_group", "exercise_label": label, "outputs": outputs}

@@ -172,11 +172,13 @@ def test_invalid_expression_is_error():
     assert_error_result(result)
 
 
-def test_leftover_free_symbols_is_error():
-    # q survives integration over x -> result is not numeric.
+def test_leftover_free_symbol_is_symbolic_success():
+    # q survives integration over x -> symbolic-only SUCCESS (bible 90/75).
     result = solve_integral(integral_exercise("q", [("x", "0", "1")]))
-    assert_error_result(result)
-    assert "q" in result["error_message"]
+    assert result["numeric_value"] is None
+    assert result["solution_latex"] == "q"
+    assert result["_symbolic_result"] == "q"
+    assert "status" not in result
 
 
 def test_divergent_integral_is_error_not_inf():
@@ -195,3 +197,41 @@ def test_convergent_improper_integral_succeeds():
     )
     assert result["numeric_value"] == pytest.approx(1.0, rel=1e-14)
     assert result["solution_latex"] == "1"
+
+
+# ---------------------------------------------------------------------------
+# Symbolic-only success contract (bible 90/75, Phase 1.1)
+# ---------------------------------------------------------------------------
+
+def test_symbolic_success_parameterized_bounds():
+    # bible 48 Ex1: ∫₀ᵇ∫₀ᵃ 1 dy dx = a*b — parameters live in the bounds.
+    result = solve_integral(
+        integral_exercise("1", [("y", "0", "a"), ("x", "0", "b")])
+    )
+    assert result["numeric_value"] is None
+    assert result["solution_latex"] == "a b"
+    assert "status" not in result
+
+
+def test_symbolic_success_function_parameter():
+    # bible 48 Ex2: ∫₀¹ k*x^2 dx = k/3 — parameter lives in the function.
+    result = solve_integral(integral_exercise("k*x**2", [("x", "0", "1")]))
+    assert result["numeric_value"] is None
+    assert result["solution_latex"] == r"\frac{k}{3}"
+    assert "status" not in result
+
+
+def test_divergent_with_free_symbol_is_error():
+    # ∫₀¹ a/x dx = oo*sign(a): still has free symbol a but is not finite —
+    # the symbolic-success guard must not weaken the divergence guard.
+    result = solve_integral(integral_exercise("a/x", [("x", "0", "1")]))
+    assert_error_result(result)
+
+
+def test_unevaluated_integral_with_free_symbol_is_error():
+    # ∫₀¹ a*x^x dx -> a*Integral(x**x, (x, 0, 1)): x**x has no closed-form
+    # antiderivative in SymPy, so the result still contains an unevaluated
+    # Integral despite having a free symbol (a) — the symbolic path never
+    # accepts one (asymmetric with the numeric path, bible 90).
+    result = solve_integral(integral_exercise("a*x**x", [("x", "0", "1")]))
+    assert_error_result(result)

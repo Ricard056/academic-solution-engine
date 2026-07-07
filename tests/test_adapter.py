@@ -180,6 +180,37 @@ def test_standard_item_golden_ex1():
     assert item["show_quantity"] is True
 
 
+def test_standard_item_symbolic_success_show_numeric_forced_false():
+    # bible 48 Ex1 shape: ∫₀ᵇ∫₀ᵃ 1 dy dx = a*b — symbolic-only success.
+    exercise = solved({
+        "id": 1, "type": "integral", "function": "1",
+        "integrals": [{"var": "y", "lower": "0", "upper": "a"},
+                      {"var": "x", "lower": "0", "upper": "b"}],
+    })
+    (item,) = model_for([exercise])["items"]
+    assert set(item) == STANDARD_FIELDS  # closed contract shape unchanged
+    assert item["quantity_label"] == "A"  # inferred: 2 integrals + function "1"
+    assert item["units"] == "u^2"
+    assert item["solution_latex"] == "a b"
+    assert item["show_symbolic"] is True
+    assert item["show_numeric"] is False  # RESOLVED off despite DEFAULTS true
+    assert item["decimal_string"] == ""
+
+
+def test_standard_item_symbolic_success_1d():
+    # bible 48 Ex2 shape: ∫₀¹ k*x^2 dx = k/3 — parameter in the function, 1D.
+    exercise = solved({
+        "id": 2, "type": "integral", "function": "k*x**2",
+        "integrals": [{"var": "x", "lower": "0", "upper": "1"}],
+    })
+    (item,) = model_for([exercise])["items"]
+    assert item["quantity_label"] == "R"  # 1D never infers A/V
+    assert item["units"] == "u"
+    assert item["solution_latex"] == r"\frac{k}{3}"
+    assert item["show_numeric"] is False
+    assert item["decimal_string"] == ""
+
+
 def test_standard_item_golden_ex7_overrides():
     exercise = solved({
         "id": 7, "type": "integral", "function": "x*y",
@@ -220,6 +251,28 @@ def test_output_group_golden_ex6():
     assert (first["id_output"], second["id_output"]) == (1, 2)
     assert first["output_label"] == "Resultado 1"
     assert second["output_label"] == "Resultado 2"
+
+
+def test_output_group_member_symbolic_resolved_individually():
+    # A symbolic-only member (numeric_value: null) is not a solver ERROR, so
+    # bible 85 resolves show_numeric/decimal_string per member instead of
+    # collapsing the whole output group.
+    members = [
+        solved(unit_square(id=6, id_output=1)),  # numeric: "1"
+        solved({
+            "id": 6, "id_output": 2, "type": "integral", "function": "1",
+            "integrals": [{"var": "y", "lower": "0", "upper": "a"},
+                          {"var": "x", "lower": "0", "upper": "1"}],
+        }),  # symbolic: "a"
+    ]
+    (item,) = model_for(members)["items"]
+    assert item["kind"] == "output_group"  # NOT collapsed to an error item
+    numeric_output, symbolic_output = item["outputs"]
+    assert numeric_output["show_numeric"] is True
+    assert numeric_output["decimal_string"] == "1.0000"
+    assert symbolic_output["show_numeric"] is False
+    assert symbolic_output["decimal_string"] == ""
+    assert symbolic_output["solution_latex"] == "a"
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +340,28 @@ def test_structural_invalid_group_is_one_error_item():
     members[1]["id_component"] = 3  # gap: 1, 3
     items = model_for(members)["items"]
     assert items == [{"kind": "error", "exercise_label": "5", "message": ERROR_MESSAGE}]
+
+
+def test_component_group_symbolic_member_collapses_to_error_item():
+    # bible 48 Ex3: one numeric component + one symbolic component, both
+    # quantity "A". Component sums are numeric-only (bible 90); aggregation
+    # refuses the group, so the adapter collapses it to one error item.
+    members = [
+        solved({
+            "id": 3, "id_component": 1, "type": "integral", "quantity": "A",
+            "function": "1",
+            "integrals": [{"var": "y", "lower": "0", "upper": "x"},
+                          {"var": "x", "lower": "0", "upper": "1"}],
+        }),
+        solved({
+            "id": 3, "id_component": 2, "type": "integral", "quantity": "A",
+            "function": "1",
+            "integrals": [{"var": "y", "lower": "0", "upper": "a"},
+                          {"var": "x", "lower": "1", "upper": "2"}],
+        }),
+    ]
+    items = model_for(members)["items"]
+    assert items == [{"kind": "error", "exercise_label": "3", "message": ERROR_MESSAGE}]
 
 
 def test_invalid_component_operation_is_one_error_item():

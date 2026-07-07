@@ -8,6 +8,9 @@ writes the IDENTICAL results.component object onto every member (bible 90/75):
 - operation        "sum" (the only Phase 1 operation)
 - operation_latex  members' solution_latex joined with " + " in id_component order
 
+A group with any member whose results.numeric_value is null (symbolic-only
+success, bible 90/75) is refused: component sums are numeric-only in Phase 1.
+
 Symbolic values come from results["_symbolic_result"] via sympify — the
 internal in-memory handoff written by the solver and stripped before
 serialization (the Extended JSON stage owns the strip and its schema-closure
@@ -70,6 +73,8 @@ def _aggregatable(members: list[dict]) -> bool:
             return False  # failed member -> whole group errors downstream
         if "_symbolic_result" not in results or "numeric_value" not in results:
             return False  # missing solve data; cannot sum safely
+        if results["numeric_value"] is None:
+            return False  # symbolic-only success: component sums are numeric-only (bible 90)
     return True
 
 

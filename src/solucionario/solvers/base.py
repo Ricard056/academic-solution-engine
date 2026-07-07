@@ -13,8 +13,11 @@ ERROR_PROBLEM_LATEX = r"\text{ERROR: Could not process exercise}"
 ERROR_SOLUTION_LATEX = r"\text{ERROR}"
 
 
-def success_result(problem_latex: str, solution_latex: str, numeric_value: float) -> dict:
-    """Bible 75 standard result: raw float, no rounding, no units, no status."""
+def success_result(
+    problem_latex: str, solution_latex: str, numeric_value: float | None
+) -> dict:
+    """Bible 75 standard result: raw float (or None for a symbolic-only
+    success), no rounding, no units, no status."""
     return {
         "problem_latex": problem_latex,
         "solution_latex": solution_latex,

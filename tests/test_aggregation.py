@@ -162,6 +162,43 @@ def test_member_missing_symbolic_handoff_is_not_aggregated():
     assert all("component" not in e["results"] for e in out)
 
 
+def test_null_numeric_member_group_is_not_aggregated():
+    # Component sums are numeric-only (bible 90): a symbolic-only member
+    # (numeric_value: null) must refuse the whole group.
+    members = [
+        solved(3, component=1, solution_latex=r"\frac{1}{2}", symbolic="1/2", numeric=0.5),
+        solved(3, component=2, solution_latex="a", symbolic="a", numeric=None),
+    ]
+    out = aggregate_components(members)
+    assert out[0] is members[0] and out[1] is members[1]
+    assert all("component" not in e["results"] for e in out)
+
+
+def test_real_solver_chain_symbolic_member_not_aggregated():
+    # bible 48 Ex3 shape: one numeric component, one symbolic component.
+    exercises = [
+        {
+            "id": 3, "id_component": 1, "type": "integral", "quantity": "A",
+            "function": "1",
+            "integrals": [{"var": "y", "lower": "0", "upper": "x"},
+                          {"var": "x", "lower": "0", "upper": "1"}],
+        },
+        {
+            "id": 3, "id_component": 2, "type": "integral", "quantity": "A",
+            "function": "1",
+            "integrals": [{"var": "y", "lower": "0", "upper": "a"},
+                          {"var": "x", "lower": "1", "upper": "2"}],
+        },
+    ]
+    for exercise in exercises:
+        exercise["results"] = solve_integral(exercise)
+    assert exercises[1]["results"]["numeric_value"] is None  # sanity check
+
+    out = aggregate_components(exercises)
+    assert "component" not in out[0]["results"]
+    assert "component" not in out[1]["results"]
+
+
 # ---------------------------------------------------------------------------
 # Purity of the output (bible 75/90)
 # ---------------------------------------------------------------------------

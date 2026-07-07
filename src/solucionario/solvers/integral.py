@@ -11,8 +11,13 @@ Jacobian into ``function`` (bible 80, P5). Math fields are expected to be
 already cleaned (the pipeline runs the cleaner first); parsing uses the
 same dialect as the cleaner's validation — standard transformations only
 (no implicit multiplication) plus ``float`` so cleaned infinity bounds
-(``float('inf')``) parse to SymPy oo. The final result must still be a
-finite real number; otherwise the exercise is an error.
+(``float('inf')``) parse to SymPy oo.
+
+The final result is classified (bible 90, symbolic-only success contract):
+a result with no free symbols must still be a finite real number, or the
+exercise is an error; a result WITH free symbols is a SUCCESS with
+``numeric_value: None`` unless it contains oo/-oo/zoo/nan or an unevaluated
+``Integral``, in which case it remains an error.
 
 Per-exercise and independent: no aggregation, no document assembly, no
 formatting (bible 90/75).
@@ -48,7 +53,7 @@ def solve_integral(exercise: dict) -> dict:
         for limit in limits:  # innermost -> outermost (bible 80)
             result = sympy.integrate(result, limit)
 
-        numeric_value = _finite_float(result)
+        numeric_value = _classify_result(result)
         results = success_result(problem_latex, sympy.latex(result), numeric_value)
         # In-memory handoff to the Component Aggregation stage (bible 90):
         # a sympify-able string, never serialized — the Extended JSON stage
@@ -69,14 +74,31 @@ def _parse(expression: str):
     return sympy.sympify(parsed)  # normalizes e.g. Python inf -> sympy oo
 
 
-def _finite_float(result) -> float:
-    """Convert the final symbolic result to a raw float, verifying first
-    that it is numeric (no leftover free symbols) and a finite real number
-    (no oo / -oo / zoo / nan). numeric_value must never be inf or nan."""
-    if result.free_symbols:
-        names = ", ".join(sorted(str(s) for s in result.free_symbols))
-        raise ValueError(f"result is not numeric (free symbols: {names})")
+def _classify_result(result) -> float | None:
+    """Bible 90 symbolic-only success guard, applied before the numeric path.
 
+    A result with free symbols is a SUCCESS with numeric_value None unless it
+    contains oo/-oo/zoo/nan or an unevaluated Integral (either of which keeps
+    it an error — divergent/indeterminate symbolic results are never
+    successes, and the symbolic path never accepts an unevaluated Integral,
+    unlike the numeric path below which may still evalf one). A result with
+    no free symbols takes the existing finite-numeric path unchanged.
+    """
+    if result.free_symbols:
+        if result.has(sympy.oo, -sympy.oo, sympy.zoo, sympy.nan):
+            raise ValueError(f"symbolic result is not finite: {result}")
+        if result.has(sympy.Integral):
+            raise ValueError(
+                f"symbolic result contains an unevaluated Integral: {result}"
+            )
+        return None  # symbolic-only success (bible 90)
+    return _finite_float(result)
+
+
+def _finite_float(result) -> float:
+    """Convert a symbol-free result to a raw float, verifying it is a finite
+    real number (no oo / -oo / zoo / nan). numeric_value must never be inf or
+    nan."""
     evaluated = result.evalf()
     if evaluated.is_real is not True or evaluated.is_finite is not True:
         raise ValueError(f"result is not a finite real number: {result}")
