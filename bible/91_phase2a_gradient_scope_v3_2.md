@@ -117,18 +117,39 @@ symbolic successes.
 - `id`/`id_letter` labeling (`1.a`, `1.b`) works exactly as in Phase 1.
 
 ### Validation matrix (gradient)
-- **Document-level (hard stop)** — unchanged from 90 (missing required top-level
-  fields, empty `exercises`, non-object input, any exercise missing `id`).
+- **Document-level (hard stop)** — the Phase 1 triggers (missing required
+  top-level fields, empty `exercises`, non-object input, any exercise missing
+  `id`), plus one Phase 2A trigger:
+  - the document mixes `type: "gradient"` with any other exercise type —
+    single-solver documents only in 2A; the template router is undefined for
+    mixed documents, so this is a hard stop, not a per-exercise error.
 - **Exercise-level (render that one exercise as `kind:"error"`)**:
   - `type` is `"gradient"` but `function` is missing/not a string;
   - no evaluation point (neither `point` nor a complete
     `initial_point`+`final_point` pair);
+  - `point` supplied together with `initial_point`/`final_point`, or an
+    incomplete two-points pair (one of `initial_point`/`final_point` without
+    the other);
+  - more than one direction source: a complete `initial_point`+`final_point`
+    pair, `vector`, `angle`, or `direction_source: "max_ascent"`; any
+    combination of two or more is an exercise-level ERROR;
+  - a point/vector entry or `angle` that is not a string (raw JSON numbers are
+    rejected — coordinates are strings);
+  - a `point`/`initial_point`/`final_point`/`vector` array whose length is not
+    exactly 2 (Phase 2A is 2-variable);
   - a supplied point/vector/angle cannot be cleaned or parsed;
-  - a zero-length direction (`final == initial`, or `vector == ⟨0, 0⟩`) — cannot
-    be normalized;
+  - a zero-length direction (`final == initial`, `vector == ⟨0, 0⟩`, or
+    `direction_source: "max_ascent"` when `∇f(P) == ⟨0, 0⟩`) — cannot be
+    normalized;
   - the gradient cannot be evaluated at the point (domain error → non-finite).
 - **Group-level (render the whole `(id, id_letter)` group as `kind:"error"`)**:
   - a gradient member carries `id_component` or `id_output` (2A restriction).
+
+> **Zero-gradient note:** if `∇f(P) = ⟨0, 0⟩`, `theta_max` is undefined. Under
+> `direction_source: "max_ascent"` this is an exercise ERROR (a direction is
+> required but undefined — see matrix). In every other mode the exercise remains
+> a SUCCESS and the `theta_max` piece is simply **omitted** (not-applicable
+> absence, exactly like `û`/`D_u f` without a direction — see 75).
 
 ---
 

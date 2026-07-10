@@ -251,6 +251,23 @@ coordinates.
 - A gradient exercise must **not** carry `id_component` or `id_output` (2A: makes
   the whole `(id, id_letter)` group a `kind:"error"` — see 65/91).
 
+### Invalid gradient inputs (exercise-level ERROR — full matrix in 91)
+- `point` supplied together with `initial_point`/`final_point`, or an incomplete
+  two-points pair (one of `initial_point`/`final_point` without the other).
+- More than one direction source: a complete `initial_point`+`final_point` pair,
+  `vector`, `angle`, or `direction_source: "max_ascent"` — any combination of two
+  or more.
+- A point/vector entry or `angle` that is not a string (raw JSON numbers are
+  rejected — coordinates are strings).
+- A `point`/`initial_point`/`final_point`/`vector` array whose length is not
+  exactly 2 (Phase 2A is 2-variable).
+- A zero-length direction (`final_point == initial_point`, `vector` parses to
+  `⟨0, 0⟩` — e.g. `["0","0"]`, `["0.0","0"]`, `["sin(0)","0"]` — or `max_ascent`
+  when `∇f(P) = ⟨0, 0⟩`).
+
+A document mixing `type: "gradient"` with any other exercise type is a
+**document-level hard stop** in 2A (single-solver documents only — see 91).
+
 ### Mode 1 — Two points (`initial_point` → `final_point`)
 ```json
 {

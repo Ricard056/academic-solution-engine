@@ -28,6 +28,16 @@
   strings and exact SymPy `*_latex` are captured from the solver when the Phase 2A
   golden test is written (ROUND_HALF_UP, 4 dp) and are not hand-derived here — the
   same discipline 49 uses (the rounding rule is owned by 47).
+- **Shorthand vs. byte-exact**: decimal strings and boolean flags in G1/G6 are
+  **byte-exact**. LaTeX fields throughout this file are pinned as MATHEMATICAL
+  content in shorthand (e.g. `⟨8, 4⟩`, `atan(1/2)`); the byte-exact SymPy strings
+  are captured when the golden test is written. "Field-for-field" in the
+  Acceptance Rule means byte-exact for decimals/flags and
+  mathematically-equivalent for LaTeX fields.
+- **Display-flag gating is unit-test scope, not golden scope**: cases exercising
+  `display_override` on `show_gradient_*` (and `id_component`/`id_output` on
+  gradient) live in the implementation's unit tests, mirroring how 48/49 keep
+  SymPy-version-sensitive and structural cases out of the golden.
 
 ---
 
@@ -141,7 +151,8 @@ Expected render item:
   `gradient_evaluated_decimal`: `""`
 - `show_magnitude`: **true** — `magnitude_latex`: `2\sqrt{a² + b²}`;
   `magnitude_numeric`: **false**; `magnitude_decimal_string`: `""`
-- `show_theta_max`: **true** — `theta_max_latex`: `atan2(b, a)` (symbolic);
+- `show_theta_max`: **true** — `theta_max_latex`: `atan2(2b, 2a)` (symbolic;
+  SymPy does not cancel the shared factor for symbolic arguments);
   `theta_max_numeric`: **false**; `theta_max_decimal_string`: `""`
 - `show_unit_vector`: **false**, `show_directional_derivative`: **false**
   (absent — no direction); their LaTeX/decimals: `""`

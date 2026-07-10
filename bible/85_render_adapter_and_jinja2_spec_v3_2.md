@@ -468,6 +468,12 @@ outputs, each independently gated.
 gets `show_* = false`, `*_numeric = false`, and empty decimal string(s).
 StrictUndefined never fires.
 
+**`show_input` is inert for gradient items in Phase 2A.** The gradient render
+item declares no `show_input`/`problem_latex` fields, so `results.problem_latex`
+is non-rendered for gradient (like the non-rendered `solution_latex` mirror, see
+75). Authored `show_input` values have no effect on gradient items (by design,
+not an error).
+
 ### Per-piece Numeric-Availability Resolution (Phase 2A)
 
 Each numeric piece (`gradient_evaluated`, `magnitude`, `unit_vector`,

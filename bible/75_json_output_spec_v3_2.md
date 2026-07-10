@@ -276,6 +276,10 @@ output piece.
 ### Two kinds of absence (important)
 - **Not applicable** — e.g. point-only exercise (no direction): the
   `unit_vector_*` and `directional_derivative_*` keys are **omitted** entirely.
+  Likewise, when `∇f(P)` parses to the zero vector `⟨0, 0⟩`, the `theta_max_*`
+  keys are **omitted** (its direction is undefined) — except under
+  `direction_source: "max_ascent"`, where a zero gradient is an exercise ERROR
+  (see 91).
 - **Applicable but symbolic** — e.g. a symbolic point/parameter: the piece's
   `*_value`/`*_values` is **`null`**, and its `*_latex` is the exact symbolic
   form. This mirrors the Phase 1.1 numeric-availability contract, per piece.
