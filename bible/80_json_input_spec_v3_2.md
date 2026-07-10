@@ -5,6 +5,10 @@
 > references updated to _v3_2. v3.1 baseline: `coordinate_system` computationally
 > passive (author supplies Jacobian); canonical `assignment.type` vocabulary;
 > `show_interpretations`/`interpretation` removed from Phase 1.
+> **Phase 2A amendment**: adds the `type: "gradient"` input contract (2-variable,
+> Cartesian, radians only; string point/vector coordinates; four direction modes
+> plus point-only). See "Gradient Solver — Exercise Examples" below and
+> `91_phase2a_gradient_scope_v3_2.md`. The integral contract is unchanged.
 
 ## Field Optionality Rules
 
@@ -207,7 +211,140 @@
 }
 ```
 
-> **Other solver examples** (gradient, derivative): See 09_deferred_solvers_v3_2.md
+> **Derivative solver example**: still deferred — see 09_deferred_solvers_v3_2.md.
+> The **gradient** input contract is now active in Phase 2A and specified below;
+> 09's gradient section is superseded.
+
+---
+
+## Gradient Solver — Exercise Examples (Phase 2A)
+
+> Full scope, restrictions, and validation matrix: `91_phase2a_gradient_scope_v3_2.md`.
+> Phase 2A is **2-variable `f(x, y)` only**, **Cartesian only**, **radians only**.
+
+### Solver-Specific Required Fields
+- `function` (string) — the scalar field `f(x, y)`.
+- An **evaluation point**, provided in exactly one of two ways:
+  - `point` — a 2-element array of strings, e.g. `["1", "3"]`; or
+  - `initial_point` **and** `final_point` — the two-points mode; the evaluation
+    point is `initial_point`.
+
+### Solver-Specific Optional Fields (direction source — at most one)
+- `vector` — a 2-element array of strings; the solver normalizes it.
+- `angle` — a **radians** math string, e.g. `"pi/4"`; `û = ⟨cos θ, sin θ⟩`.
+- `direction_source: "max_ascent"` — the direction is `∇f(P)` itself, so
+  `û ∥ ∇f(P)` and `D_u f == |∇f(P)|`.
+- If none is supplied, the exercise is a **point-only** gradient: `∇f`, `∇f(P)`,
+  `|∇f(P)|`, and `theta_max` are produced; `û` and `D_u f` are absent.
+
+### Coordinates are strings
+Every point/vector entry is a **sympy-parseable string** (`"0"`, `"sqrt(pi)"`,
+`"pi/4"`), mirroring integral bounds. They are cleaned like any math field
+(see 60_expression_cleaner_v3_2.md). Do **not** write raw JSON numbers for
+coordinates.
+
+### Not in Phase 2A
+- **No `angle_unit`.** `angle` is always radians in 2A; degree input/display is 2B.
+- **No `variables` field.** Variable order is fixed `(x, y)` in 2A.
+- **No `coordinate_system`, `quantity`, or units** for gradient — gradient output
+  is unitless in 2A.
+- A gradient exercise must **not** carry `id_component` or `id_output` (2A: makes
+  the whole `(id, id_letter)` group a `kind:"error"` — see 65/91).
+
+### Invalid gradient inputs (exercise-level ERROR — full matrix in 91)
+- `point` supplied together with `initial_point`/`final_point`, or an incomplete
+  two-points pair (one of `initial_point`/`final_point` without the other).
+- More than one direction source: a complete `initial_point`+`final_point` pair,
+  `vector`, `angle`, or `direction_source: "max_ascent"` — any combination of two
+  or more.
+- A point/vector entry or `angle` that is not a string (raw JSON numbers are
+  rejected — coordinates are strings).
+- A `point`/`initial_point`/`final_point`/`vector` array whose length is not
+  exactly 2 (Phase 2A is 2-variable).
+- A zero-length direction (`final_point == initial_point`, `vector` parses to
+  `⟨0, 0⟩` — e.g. `["0","0"]`, `["0.0","0"]`, `["sin(0)","0"]` — or `max_ascent`
+  when `∇f(P) = ⟨0, 0⟩`).
+
+A document mixing `type: "gradient"` with any other exercise type is a
+**document-level hard stop** in 2A (single-solver documents only — see 91).
+
+### Mode 1 — Two points (`initial_point` → `final_point`)
+```json
+{
+  "id": 1,
+  "id_letter": "a",
+  "type": "gradient",
+  "function": "y**2 * exp(x*y)",
+  "initial_point": ["0", "2"],
+  "final_point": ["5", "7"]
+}
+```
+
+### Mode 2 — Point + vector
+```json
+{
+  "id": 1,
+  "id_letter": "b",
+  "type": "gradient",
+  "function": "x**2 * cos(x*y)",
+  "point": ["sqrt(pi)", "sqrt(pi)"],
+  "vector": ["4", "1"]
+}
+```
+
+### Mode 3 — Point + angle (radians)
+```json
+{
+  "id": 1,
+  "id_letter": "c",
+  "type": "gradient",
+  "function": "100 * exp(-x**2 - y**2)",
+  "point": ["1", "3"],
+  "angle": "pi/4"
+}
+```
+
+### Mode 4 — Steepest ascent (`max_ascent`)
+```json
+{
+  "id": 3,
+  "id_letter": "a",
+  "type": "gradient",
+  "function": "100 * exp(-x**2 - y**2)",
+  "point": ["1", "3"],
+  "direction_source": "max_ascent"
+}
+```
+
+### Mode 5 — Point only (no direction)
+```json
+{
+  "id": 3,
+  "id_letter": "b",
+  "type": "gradient",
+  "function": "100 * exp(-x**2 - y**2)",
+  "point": ["1", "3"]
+}
+```
+
+### Display for gradient
+Gradient visibility is controlled by a **top-level** `display_gradient` block
+(parallel to `display_integral`) plus per-exercise `display_override`. See
+70_display_system_v3_2.md.
+
+```json
+{
+  "display_gradient": {
+    "show_gradient": true,
+    "show_gradient_evaluated": true,
+    "show_magnitude": true,
+    "show_unit_vector": true,
+    "show_directional_derivative": true,
+    "show_theta_max": true,
+    "decimal_places": 4
+  }
+}
+```
 
 ---
 

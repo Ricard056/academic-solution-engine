@@ -1,6 +1,11 @@
 # Expression Cleaner Specification — v3.2
 
 > **v3.2 changes**: references/version label only. Content unchanged.
+> **Phase 2A amendment**: gradient's string coordinate entries
+> (`point`/`initial_point`/`final_point`/`vector`) and its radians `angle` string
+> are cleaned like any math field; the cleaner performs no unit conversion (there is
+> no `angle_unit` in 2A). This supersedes 09's "point/vector are already numeric".
+> Integral cleaning is unchanged. See `91_phase2a_gradient_scope_v3_2.md`.
 
 ## Purpose
 Provide safe, predictable transformations for mathematical expressions in JSON
@@ -23,10 +28,11 @@ be evaluated by solvers. Metadata, display settings, and descriptive fields are
 NEVER processed.
 
 ### Fields TO Process (Mathematical)
-- `function` — the integrand/expression
+- `function` — the integrand/expression (integral) or scalar field (gradient)
 - `integrals[].lower` — integration bounds
 - `integrals[].upper` — integration bounds
-- Angle expressions when they contain math (gradient solver, future)
+- Gradient (Phase 2A): each string entry of `point`, `initial_point`,
+  `final_point`, and `vector`; and the `angle` string (radians math)
 
 ### Fields NOT TO Process
 - Identifiers: `id`, `id_letter`, `id_component`, `id_output`
@@ -157,6 +163,13 @@ JSON Input → Field Filter → Expression Cleaner → Solver → Results → JS
 - Clean integral bounds (`lower`, `upper`)
 - Handle infinity in bounds
 - DO NOT process: `quantity`, `var`, `coordinate_system`
+
+### Cleaner Scope for Gradient Solver (Phase 2A)
+- Clean `function` field
+- Clean each string entry of `point`, `initial_point`, `final_point`, `vector`
+- Clean the `angle` string (radians math, e.g. `pi/4`)
+- No unit conversion — `angle` is radians; there is no `angle_unit` in 2A
+- DO NOT process: `type`, `direction_source`, `id`/`id_letter`, `display_*`
 
 ---
 

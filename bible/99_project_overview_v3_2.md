@@ -4,6 +4,11 @@
 > Aggregation noted as a distinct pipeline stage (not a solver) under Key Design
 > Decisions (P1). v3.1 baseline: added 47_golden_expected; formatting-ownership
 > design decision noted.
+> **Phase 2A note**: the gradient solver is now an active development phase
+> (2-variable, Cartesian). Scope lives in `91_phase2a_gradient_scope_v3_2.md`;
+> acceptance in `51`/`52`. It is added without modifying the integral solver or
+> template (success criteria #4/#5). Phase 1 (integrals) and Phase 1.1 (symbolic)
+> are unchanged.
 
 ## What Is This Project
 
@@ -48,7 +53,10 @@ or unreliable copy-paste from computational tools.
 - **Single institution**: ITSON mathematics department
 - **Course focus**: Calculus 3 (multivariable calculus)
 - **Phase 1 solver**: Integrals (see 90_phase1_scope_v3_2.md)
-- **Future solvers**: Gradients, Derivatives (see 09_deferred_solvers_v3_2.md)
+- **Phase 2A solver**: Gradient — 2-variable, Cartesian (see
+  91_phase2a_gradient_scope_v3_2.md)
+- **Future solvers**: Derivatives, 3D gradients (see 09_deferred_solvers_v3_2.md
+  for the deferred derivative spec; 09's gradient section is superseded by Phase 2A)
 - **No frontend**: Command-line only
 - **No multi-user**: No authentication, no web interface
 
@@ -96,6 +104,7 @@ or unreliable copy-paste from computational tools.
 | File | Responsibility |
 |------|---------------|
 | 99_project_overview_v3_2 (this file) | Project context and vision |
+| 91_phase2a_gradient_scope_v3_2 | Phase 2A gradient scope lock (parallel to 90) |
 | 90_phase1_scope_v3_2 | What's in/out for current development phase |
 | 85_render_adapter_and_jinja2_spec_v3_2 | Adapter contract, formatting ownership, templates |
 | 80_json_input_spec_v3_2 | JSON input structure, examples, syntax |
@@ -104,11 +113,13 @@ or unreliable copy-paste from computational tools.
 | 65_id_system_v3_2 | Exercise identification concepts |
 | 60_expression_cleaner_v3_2 | Mathematical expression preprocessing |
 | 55_file_handling_v3_2 | File operation safety rules |
+| 52_golden_expected_gradient_v3_2 | Expected render-model values for the gradient contract (Phase 2A) |
+| 51_test_data_gradient_v3_2.json | Gradient-contract test data (Phase 2A) |
 | 50_config_defaults_global_v3_2.json | Machine-readable default display values |
 | 49_golden_expected_symbolic_v3_2 | Expected render-model values for the symbolic contract (Phase 1.1) |
 | 48_test_data_symbolic_v3_2.json | Symbolic-contract test data (Phase 1.1) |
 | 47_golden_expected_v3_2 | Expected render-model values for acceptance |
 | 46_test_data_integral_edge_cases_v3_2.json | Edge-case test data |
 | 45_test_data_T21_v3_2.json | Real assignment test data |
-| 09_deferred_solvers_v3_2 | Gradient/derivative specs (future reference) |
+| 09_deferred_solvers_v3_2 | Derivative spec (future reference); gradient section superseded by Phase 2A |
 | 08_deferred_features_v3_2 | Future feature notes (show_steps, show_all, interpretations, etc.) |

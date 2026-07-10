@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "institution": "itson",
+    "course_code": "c3",
+    "course": "Calculus 3",
+    "assignment": {
+      "type": "hw",
+      "number": 9012,
+      "year": 2026,
+      "month": 7,
+      "iteration": 1
+    },
+    "file_naming_mode": "testing",
+    "notes": "Phase 2A gradient contract acceptance data (2-variable, Cartesian, radians only). G1 (id 1) is the two-points anchor from the hand-verified Tarea 12 1a. G2 (id 2) point+vector, G3 (id 3) point+angle, G4 (id 4) max_ascent, G5 (id 5) point-only/no-direction, G6 (id 6) symbolic point. E1 (id 7) missing point and E2 (id 8) zero-length direction are INTENDED errors. Expected render-model values are in 52_golden_expected_gradient_v3_2.md. Bible 46/47 and 48/49 remain frozen. Single-solver document (all gradient)."
+  },
+  "display_default": {
+    "show_input": true,
+    "decimal_places": 4
+  },
+  "display_gradient": {
+    "show_gradient": true,
+    "show_gradient_evaluated": true,
+    "show_magnitude": true,
+    "show_unit_vector": true,
+    "show_directional_derivative": true,
+    "show_theta_max": true
+  },
+  "exercises": [
+    {
+      "id": 1,
+      "type": "gradient",
+      "function": "y**2 * exp(x*y)",
+      "initial_point": ["0", "2"],
+      "final_point": ["5", "7"]
+    },
+    {
+      "id": 2,
+      "type": "gradient",
+      "function": "x**2 * cos(x*y)",
+      "point": ["sqrt(pi)", "sqrt(pi)"],
+      "vector": ["4", "1"]
+    },
+    {
+      "id": 3,
+      "type": "gradient",
+      "function": "100 * exp(-x**2 - y**2)",
+      "point": ["1", "3"],
+      "angle": "pi/4"
+    },
+    {
+      "id": 4,
+      "type": "gradient",
+      "function": "100 * exp(-x**2 - y**2)",
+      "point": ["1", "3"],
+      "direction_source": "max_ascent"
+    },
+    {
+      "id": 5,
+      "type": "gradient",
+      "function": "100 * exp(-x**2 - y**2)",
+      "point": ["1", "3"]
+    },
+    {
+      "id": 6,
+      "type": "gradient",
+      "function": "x**2 + y**2",
+      "point": ["a", "b"]
+    },
+    {
+      "id": 7,
+      "type": "gradient",
+      "function": "x**2 + y**2"
+    },
+    {
+      "id": 8,
+      "type": "gradient",
+      "function": "x**2 + y**2",
+      "point": ["1", "1"],
+      "vector": ["0", "0"]
+    }
+  ]
+}

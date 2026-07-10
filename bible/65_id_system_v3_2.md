@@ -6,6 +6,10 @@
 > updated to _v3_2.
 > **Phase 1.1 amendment**: component members must produce numeric results (see
 > Component Rules).
+> **Phase 2A amendment**: gradient exercises are standard-items-only; a gradient
+> member carrying `id_component` or `id_output` is a group-level ERROR (see
+> "Gradient (Phase 2A)" below and `91_phase2a_gradient_scope_v3_2.md`). Aggregation
+> stays integral-only. Integral grouping rules are unchanged.
 
 ## Core ID Fields
 
@@ -128,6 +132,26 @@ Unlike components, outputs do NOT combine — each is a standalone result.
   ERROR item (see 90_phase1_scope_v3_2.md).
 - Each output is solved independently
 - No combination operation — results displayed side by side
+
+---
+
+## Gradient (Phase 2A)
+
+Gradient exercises support **standard items only**. Each `(id, id_letter)` is a
+single standard gradient item; the six gradient outputs are facets of that one
+item, not separate results — so neither combining (`id_component`) nor
+independent-outputs (`id_output`) applies.
+
+- A gradient member carrying `id_component` **or** `id_output` makes the whole
+  `(id, id_letter)` group a **group-level ERROR** (one `kind:"error"` render item).
+  This is a **Phase 2A restriction, not permanent** — there is no current gradient
+  use case for either field.
+- **Aggregation remains integral-only.** The Component Aggregation stage never runs
+  for gradient (gradient has no `id_component`).
+- `id`/`id_letter` labeling (`1.a`, `1.b`, `1.c`) works exactly as for integrals.
+
+The `id_output` example above uses `type:"derivative"` (still deferred) purely to
+illustrate the independent-outputs concept; it is not a gradient pattern.
 
 ---
 
