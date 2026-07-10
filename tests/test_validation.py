@@ -1,7 +1,9 @@
 """Tests for three-tier validation (document / exercise / group).
 
-Covers the validation matrix in bible/90_phase1_scope_v3_2.md: document-level
-hard stops, exercise-level ERROR triggers, and group-level ERROR triggers.
+Covers the validation matrix in bible/90_phase1_scope_v3_2.md — document-level
+hard stops, exercise-level ERROR triggers, and group-level ERROR triggers —
+plus the Phase 2A gradient matrix of bible/91_phase2a_gradient_scope_v3_2.md
+(mixed-document hard stop, gradient static checks, standard-items-only rule).
 """
 
 import pytest
@@ -24,6 +26,23 @@ def make_exercise(**overrides) -> dict:
             {"var": "y", "lower": "0", "upper": "1"},
             {"var": "x", "lower": "0", "upper": "1"},
         ],
+    }
+    for key, value in overrides.items():
+        if value is None:
+            exercise.pop(key, None)
+        else:
+            exercise[key] = value
+    return exercise
+
+
+def make_gradient_exercise(**overrides) -> dict:
+    """A valid minimal gradient exercise (point-only mode, bible 91);
+    overrides replace or (None) drop keys, like make_exercise."""
+    exercise = {
+        "id": 1,
+        "type": "gradient",
+        "function": "x**2 + y**2",
+        "point": ["1", "3"],
     }
     for key, value in overrides.items():
         if value is None:
@@ -110,6 +129,47 @@ def test_non_object_exercise_entry_is_hard_stop():
         validate_document(document)
 
 
+def test_all_gradient_document_passes():
+    document = make_document(
+        exercises=[make_gradient_exercise(), make_gradient_exercise(id=2)]
+    )
+    validate_document(document)  # must not raise
+
+
+def test_mixed_gradient_and_integral_document_is_hard_stop():
+    # bible 91: single-solver documents only in Phase 2A.
+    document = make_document(
+        exercises=[make_exercise(), make_gradient_exercise(id=2)]
+    )
+    with pytest.raises(DocumentValidationError, match="mixes gradient"):
+        validate_document(document)
+
+
+def test_mixed_gradient_and_unknown_type_document_is_hard_stop():
+    # "any other exercise type" (bible 91) includes unknown type strings.
+    document = make_document(
+        exercises=[make_gradient_exercise(), make_exercise(id=2, type="bogus")]
+    )
+    with pytest.raises(DocumentValidationError, match="mixes gradient"):
+        validate_document(document)
+
+
+def test_gradient_with_missing_type_member_is_not_a_hard_stop():
+    # A missing type is not "another type": it stays an exercise-level ERROR.
+    document = make_document(
+        exercises=[make_gradient_exercise(), make_exercise(id=2, type=None)]
+    )
+    validate_document(document)  # must not raise
+
+
+def test_integral_with_unknown_type_member_is_not_a_hard_stop():
+    # Phase 1 behavior preserved: without gradient there is no mixing rule.
+    document = make_document(
+        exercises=[make_exercise(), make_exercise(id=2, type="bogus")]
+    )
+    validate_document(document)  # must not raise
+
+
 # ---------------------------------------------------------------------------
 # Exercise tier (continue; one exercise becomes ERROR)
 # ---------------------------------------------------------------------------
@@ -127,9 +187,10 @@ def test_missing_type_is_exercise_error():
     assert validate_exercise(make_exercise(type=None)) == "type is missing"
 
 
-@pytest.mark.parametrize("bad_type", ["derivative", "gradient", "Integral", 7])
+@pytest.mark.parametrize("bad_type", ["derivative", "Integral", 7])
 def test_unknown_type_is_exercise_error(bad_type):
-    # "derivative"/"gradient" are deferred solvers (bible 09) — unknown in Phase 1.
+    # "derivative" is a deferred solver (bible 09) — unknown. "gradient" is a
+    # known type since Phase 2A (bible 91).
     assert "unknown type" in validate_exercise(make_exercise(type=bad_type))
 
 
@@ -161,6 +222,123 @@ def test_bound_missing_key_is_exercise_error(missing_key):
 def test_non_object_bound_is_exercise_error():
     message = validate_exercise(make_exercise(integrals=["0 to 1"]))
     assert message == "integral bound 1 is not an object"
+
+
+# ---------------------------------------------------------------------------
+# Exercise tier — gradient static matrix (bible 91/80, Phase 2A)
+# ---------------------------------------------------------------------------
+
+def test_valid_gradient_point_only():
+    assert validate_exercise(make_gradient_exercise()) is None
+
+
+def test_valid_gradient_two_points():
+    exercise = make_gradient_exercise(
+        point=None, initial_point=["0", "2"], final_point=["5", "7"]
+    )
+    assert validate_exercise(exercise) is None
+
+
+def test_valid_gradient_point_vector():
+    assert validate_exercise(make_gradient_exercise(vector=["4", "1"])) is None
+
+
+def test_valid_gradient_point_angle():
+    assert validate_exercise(make_gradient_exercise(angle="pi/4")) is None
+
+
+def test_valid_gradient_max_ascent():
+    exercise = make_gradient_exercise(direction_source="max_ascent")
+    assert validate_exercise(exercise) is None
+
+
+def test_gradient_missing_function_is_exercise_error():
+    message = validate_exercise(make_gradient_exercise(function=None))
+    assert message == "function is missing"
+
+
+def test_gradient_non_string_function_is_exercise_error():
+    message = validate_exercise(make_gradient_exercise(function=5))
+    assert "function must be a string" in message
+
+
+def test_gradient_no_evaluation_point_is_exercise_error():
+    # E1 of bible 51/52: function only — no point, no two-points pair.
+    message = validate_exercise(make_gradient_exercise(point=None))
+    assert "no evaluation point" in message
+
+
+@pytest.mark.parametrize("extra", ["initial_point", "final_point"])
+def test_point_with_pair_field_is_exercise_error(extra):
+    message = validate_exercise(make_gradient_exercise(**{extra: ["0", "0"]}))
+    assert "point conflicts" in message
+
+
+@pytest.mark.parametrize("only", ["initial_point", "final_point"])
+def test_incomplete_two_points_pair_is_exercise_error(only):
+    message = validate_exercise(
+        make_gradient_exercise(point=None, **{only: ["0", "2"]})
+    )
+    assert "incomplete two-points pair" in message
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        # complete two-points pair + each other source
+        {"point": None, "initial_point": ["0", "2"], "final_point": ["5", "7"],
+         "vector": ["4", "1"]},
+        {"point": None, "initial_point": ["0", "2"], "final_point": ["5", "7"],
+         "angle": "pi/4"},
+        {"point": None, "initial_point": ["0", "2"], "final_point": ["5", "7"],
+         "direction_source": "max_ascent"},
+        # point + two of vector/angle/max_ascent
+        {"vector": ["4", "1"], "angle": "pi/4"},
+        {"vector": ["4", "1"], "direction_source": "max_ascent"},
+        {"angle": "pi/4", "direction_source": "max_ascent"},
+    ],
+)
+def test_multiple_direction_sources_are_exercise_error(overrides):
+    message = validate_exercise(make_gradient_exercise(**overrides))
+    assert "more than one direction source" in message
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"point": ["1", 3]},
+        {"vector": [4, 1]},
+        {"point": None, "initial_point": [0, "2"], "final_point": ["5", "7"]},
+        {"point": None, "initial_point": ["0", "2"], "final_point": ["5", 7]},
+    ],
+)
+def test_non_string_coordinate_entry_is_exercise_error(overrides):
+    # bible 80: raw JSON numbers are rejected — coordinates are strings.
+    message = validate_exercise(make_gradient_exercise(**overrides))
+    assert "2-element array of strings" in message
+
+
+@pytest.mark.parametrize(
+    "bad_value", [["1"], ["1", "2", "3"], [], "1,3", {"x": "1", "y": "3"}]
+)
+def test_wrong_shape_point_is_exercise_error(bad_value):
+    message = validate_exercise(make_gradient_exercise(point=bad_value))
+    assert "2-element array of strings" in message
+
+
+def test_wrong_length_vector_is_exercise_error():
+    message = validate_exercise(make_gradient_exercise(vector=["1", "2", "3"]))
+    assert "2-element array of strings" in message
+
+
+def test_non_string_angle_is_exercise_error():
+    message = validate_exercise(make_gradient_exercise(angle=0.785))
+    assert "angle must be a string" in message
+
+
+def test_unknown_direction_source_is_exercise_error():
+    message = validate_exercise(make_gradient_exercise(direction_source="descent"))
+    assert "unknown direction_source" in message
 
 
 # ---------------------------------------------------------------------------
@@ -276,3 +454,17 @@ def test_inferred_quantity_conflict_is_group_error():
         make_exercise(id_component=2, function="x + y"),
     ]
     assert "different quantity_labels" in validate_group(members)
+
+
+# ---------------------------------------------------------------------------
+# Group tier — gradient is standard-items-only (bible 91/65, Phase 2A)
+# ---------------------------------------------------------------------------
+
+def test_gradient_standard_group_is_valid():
+    assert validate_group([make_gradient_exercise()]) is None
+
+
+@pytest.mark.parametrize("field", ["id_component", "id_output"])
+def test_gradient_with_grouping_field_is_group_error(field):
+    members = [make_gradient_exercise(**{field: 1})]
+    assert "standard-items-only" in validate_group(members)
