@@ -11,6 +11,11 @@
 > 85_render_adapter_and_jinja2_spec_v3_2.md).
 > **Phase 1.1 amendment**: symbolic-only success contract — `numeric_value` may
 > be `null` (see field description and Symbolic Result below).
+> **Phase 2A amendment**: adds the gradient results schema — top-level
+> `numeric_value: null` for every gradient success plus a `results.gradient`
+> sub-object (the authoritative rendering source). See "Results Structure —
+> Gradient Solver" below and `91_phase2a_gradient_scope_v3_2.md`. The integral
+> results schema is unchanged.
 
 ---
 
@@ -212,10 +217,89 @@ pipeline continues processing remaining exercises.
 
 ---
 
+## Results Structure — Gradient Solver (Phase 2A)
+
+> Scope/restrictions: `91_phase2a_gradient_scope_v3_2.md`. Like the integral
+> solver, the gradient solver stores only raw floats and LaTeX strings — no
+> formatted decimals, no units (adapter-owned, bible 85). Phase 2A is 2-variable,
+> Cartesian, radians only.
+
+A gradient result keeps the canonical `{problem_latex, solution_latex,
+numeric_value}` skeleton **plus** a `results.gradient` sub-object holding every
+output piece.
+
+```json
+"results": {
+  "problem_latex": "\\nabla f(x, y)",
+  "solution_latex": "\\left\\langle y^{3} e^{x y}, \\; y e^{x y} \\left(x y + 2\\right) \\right\\rangle",
+  "numeric_value": null,
+
+  "gradient": {
+    "gradient_latex": "\\left\\langle y^{3} e^{x y}, \\; y e^{x y} \\left(x y + 2\\right) \\right\\rangle",
+    "gradient_evaluated_latex": "\\left\\langle 8, \\; 4 \\right\\rangle",
+    "gradient_evaluated_values": [8.0, 4.0],
+
+    "magnitude_latex": "4 \\sqrt{5}",
+    "magnitude_value": 8.94427190999916,
+
+    "theta_max_latex": "\\operatorname{atan}{\\left(\\frac{1}{2} \\right)}",
+    "theta_max_value": 0.4636476090008061,
+
+    "unit_vector_latex": "\\left\\langle \\frac{\\sqrt{2}}{2}, \\; \\frac{\\sqrt{2}}{2} \\right\\rangle",
+    "unit_vector_values": [0.7071067811865476, 0.7071067811865476],
+
+    "directional_derivative_latex": "6 \\sqrt{2}",
+    "directional_derivative_value": 8.485281374238571
+  }
+}
+```
+
+### Field rules
+- **Top-level `numeric_value` is `null`** for every gradient SUCCESS. A gradient
+  headline is vector-valued and has no single scalar; `null` here is a success,
+  not an error. The gradient render path never uses this field.
+- **`solution_latex` is a non-rendered mirror** of `gradient.gradient_latex`. It
+  exists only for skeleton uniformity and JSON readability; **`results.gradient`
+  is the authoritative source for all rendering** (bible 85).
+- **`problem_latex`** is the gradient setup (e.g. `\nabla f(x, y)`).
+
+### `results.gradient` pieces
+| Key | Meaning | Value type |
+|---|---|---|
+| `gradient_latex` | symbolic `∇f(x, y)` | LaTeX string (always present) |
+| `gradient_evaluated_latex` / `_values` | `∇f(P)` | LaTeX + component floats (or `null` if symbolic) |
+| `magnitude_latex` / `magnitude_value` | `\|∇f(P)\|` | LaTeX + float (or `null` if symbolic) |
+| `theta_max_latex` / `theta_max_value` | steepest-ascent angle, **radians** | LaTeX + float (or `null`) |
+| `unit_vector_latex` / `_values` | `û` — **present only when a direction was supplied** | LaTeX + component floats (or `null`) |
+| `directional_derivative_latex` / `_value` | `D_u f` — **present only when a direction was supplied** | LaTeX + float (or `null`) |
+
+### Two kinds of absence (important)
+- **Not applicable** — e.g. point-only exercise (no direction): the
+  `unit_vector_*` and `directional_derivative_*` keys are **omitted** entirely.
+- **Applicable but symbolic** — e.g. a symbolic point/parameter: the piece's
+  `*_value`/`*_values` is **`null`**, and its `*_latex` is the exact symbolic
+  form. This mirrors the Phase 1.1 numeric-availability contract, per piece.
+
+Divergent/undefined results (any `oo`/`-oo`/`zoo`/`nan`, a domain error at the
+point, or a zero-length direction) remain **errors** — never symbolic successes.
+
+### Canonical vector delimiter
+All vector LaTeX (symbolic and, in the render model, decimal) uses
+`\left\langle … \right\rangle`. The solver emits it for `*_latex`; the adapter
+emits it for decimal vectors (bible 85). No other delimiter is used.
+
+### Purity
+`results.gradient` contains only raw floats (nullable) and LaTeX strings. No
+formatted decimal strings, no units — those are render-model-only (bible 85), so
+re-runs with new `decimal_places` reformat correctly.
+
+---
+
 ## Results Structure — Other Solvers
 
-> **Deferred**: Gradient and derivative results structures are documented in
-> 09_deferred_solvers_v3_2.md for future reference.
+> **Deferred**: the **derivative** results structure is documented in
+> 09_deferred_solvers_v3_2.md for future reference. (09's **gradient** section is
+> superseded by the section above.)
 
 ---
 

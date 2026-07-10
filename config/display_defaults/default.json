@@ -15,5 +15,12 @@
   "show_component_quantity": true,
   "show_component_symbolic": true,
   "show_component_operation": true,
-  "show_component_total": true
+  "show_component_total": true,
+
+  "show_gradient": true,
+  "show_gradient_evaluated": true,
+  "show_magnitude": true,
+  "show_unit_vector": true,
+  "show_directional_derivative": true,
+  "show_theta_max": true
 }

@@ -12,6 +12,12 @@
 > contract; StrictUndefined in dev/test; component display fields wired.
 > **Phase 1.1 amendment**: Numeric-Availability Resolution — symbolic-only
 > results (`numeric_value: null`) resolve `show_numeric` off in the adapter.
+> **Phase 2A amendment**: adds the `"gradient"` render item (per-piece
+> Numeric-Availability Resolution), the `format_vector_decimal` rule, the canonical
+> `\left\langle … \right\rangle` delimiter mandate, template routing by document
+> solver, and the single-solver-document restriction. See "Gradient Support
+> (Phase 2A)" below and `91_phase2a_gradient_scope_v3_2.md`. Integral items,
+> decimal formatting, and the existing item types are unchanged.
 
 ---
 
@@ -406,6 +412,141 @@ results generation, or whose component/output group has a structural problem
   "message": "ERROR: no se pudo procesar este ejercicio."
 }
 ```
+
+---
+
+## Gradient Support (Phase 2A)
+
+> Scope/restrictions: `91_phase2a_gradient_scope_v3_2.md`. Results schema:
+> `75_json_output_spec_v3_2.md`. Phase 2A is 2-variable, Cartesian, radians only,
+> and gradient output is **unitless** (no unit derivation, no `quantity_label`).
+
+### 5. Gradient Item
+
+Used for a standard gradient exercise (`type: "gradient"`). The adapter sources
+**every** field from `results.gradient` (the authoritative sub-object); it never
+reads the top-level `numeric_value` or `solution_latex` for a gradient item. Six
+outputs, each independently gated.
+
+```json
+{
+  "kind": "gradient",
+  "exercise_label": "1",
+
+  "show_gradient": true,
+  "gradient_latex": "\\left\\langle y^{3} e^{x y}, \\; y e^{x y} \\left(x y + 2\\right) \\right\\rangle",
+
+  "show_gradient_evaluated": true,
+  "gradient_evaluated_latex": "\\left\\langle 8, \\; 4 \\right\\rangle",
+  "gradient_evaluated_numeric": true,
+  "gradient_evaluated_decimal": "\\left\\langle 8.0000, \\; 4.0000 \\right\\rangle",
+
+  "show_magnitude": true,
+  "magnitude_latex": "4 \\sqrt{5}",
+  "magnitude_numeric": true,
+  "magnitude_decimal_string": "8.9443",
+
+  "show_unit_vector": true,
+  "unit_vector_latex": "\\left\\langle \\frac{\\sqrt{2}}{2}, \\; \\frac{\\sqrt{2}}{2} \\right\\rangle",
+  "unit_vector_numeric": true,
+  "unit_vector_decimal": "\\left\\langle 0.7071, \\; 0.7071 \\right\\rangle",
+
+  "show_directional_derivative": true,
+  "directional_derivative_latex": "6 \\sqrt{2}",
+  "directional_derivative_numeric": true,
+  "directional_derivative_decimal_string": "8.4853",
+
+  "show_theta_max": true,
+  "theta_max_latex": "\\operatorname{atan}{\\left(\\frac{1}{2} \\right)}",
+  "theta_max_numeric": true,
+  "theta_max_decimal_string": "0.4636"
+}
+```
+
+**Closed contract:** every field above is populated on every gradient item. An
+**absent** piece (point-only exercise → no `unit_vector`/`directional_derivative`)
+gets `show_* = false`, `*_numeric = false`, and empty decimal string(s).
+StrictUndefined never fires.
+
+### Per-piece Numeric-Availability Resolution (Phase 2A)
+
+Each numeric piece (`gradient_evaluated`, `magnitude`, `unit_vector`,
+`directional_derivative`, `theta_max`) mirrors the standard item's
+symbolic/numeric split, resolved **per piece** into TWO booleans:
+
+- **`show_<piece>`** = `author_requested_show_<piece>` **AND** the piece is
+  **present** in `results.gradient`. Gates the whole line. A **symbolic** value
+  (`*_value: null`) does **not** turn it off — the symbolic `*_latex` still
+  renders, exactly as `show_symbolic` survives a null result for standard items.
+- **`<piece>_numeric`** = `show_<piece>` **AND** the piece's `*_value`/`*_values`
+  is **not null**. Gates only the "`= <decimal>`" tail. When `false`, the decimal
+  field is `""`.
+
+`show_gradient` (the symbolic `∇f(x, y)` line) has no decimal and is gated only by
+the author flag, since `gradient_latex` is always present. This is the direct
+generalization of the Phase 1.1 Numeric-Availability Resolution: the **decimal**
+is what gets suppressed when a value is null — never the **symbolic** form.
+
+### Decimal formatting for vectors — `format_vector_decimal`
+
+Each vector piece's raw component array from `results.gradient` (`*_values`) is
+formatted **component-wise** with the Decimal Formatting Rule (`decimal.Decimal` +
+`ROUND_HALF_UP`) and joined into a **complete** LaTeX string:
+
+```
+format_vector_decimal([8.0, 4.0], n=4) -> "\\left\\langle 8.0000, \\; 4.0000 \\right\\rangle"
+```
+
+This is the vector analogue of `format_operation_decimal_string` (which already
+assembles a composite display string from raw floats). It is **adapter-owned
+formatting**, not math: the adapter imports no SymPy and never recomputes the
+gradient. Scalar pieces (`magnitude`, `directional_derivative`, `theta_max`) use
+the ordinary scalar Decimal Formatting Rule.
+
+Render-model gradient decimal fields and their sources:
+
+| Render field | Source (raw) | Notes |
+|---|---|---|
+| `gradient_evaluated_decimal` | `gradient.gradient_evaluated_values` | complete `⟨…⟩` decimal string |
+| `unit_vector_decimal` | `gradient.unit_vector_values` | complete `⟨…⟩` decimal string |
+| `magnitude_decimal_string` | `gradient.magnitude_value` | scalar |
+| `directional_derivative_decimal_string` | `gradient.directional_derivative_value` | scalar |
+| `theta_max_decimal_string` | `gradient.theta_max_value` | scalar, **radians** |
+
+### Canonical vector delimiter (mandate)
+
+All vector LaTeX — symbolic (`*_latex`, from the solver) and decimal
+(`*_decimal`, from the adapter) — uses **`\left\langle … \right\rangle`** with
+`, \;` between components. Both layers emit a **complete** string for their own
+value; the template only echoes them and assembles no vectors. No other delimiter
+is permitted.
+
+### Units
+
+Gradient items carry **no units** in Phase 2A. The adapter performs no unit
+derivation and resolves no `quantity_label` for gradient. The gradient template
+renders no unit token.
+
+### Template routing (by document solver)
+
+Because adding a solver must not modify the existing integral template
+(project overview 99, #4/#5), gradient uses its **own** template and the renderer
+**routes**:
+
+- The adapter sets `render_model["document"]["template"]` to the template
+  appropriate for the document's solver — `"solucionario_integrales.tex.j2"` for
+  integral documents, `"solucionario_gradientes.tex.j2"` for gradient documents —
+  derived from the exercise `type`(s) present.
+- `render/latex.py` selects the template by that field, defaulting to the integral
+  template when the field is absent (back-compatible with Phase 1 render models).
+- **Single-solver documents only in Phase 2A:** a document is all-integral or
+  all-gradient. Mixed-solver documents are out of scope (deferred to 2B).
+
+> The gradient template file (`templates/solucionario_gradientes.tex.j2`) and the
+> `render/latex.py` routing code are created in the **implementation** milestone,
+> not the spec milestone. This section is the contract they must satisfy: the
+> template is zero-logic (only boolean `show_*` checks and LaTeX echo), and every
+> field it reads is declared on the gradient item above.
 
 ---
 

@@ -1,106 +1,37 @@
 # Deferred Solvers Reference — v3.2
 
-> **Status**: NOT in Phase 1 scope. This file preserves gradient and derivative
-> specifications for future implementation.
-> **When to use**: When starting Phase 2+ and adding new solver types.
+> **Status**: The **gradient** section is SUPERSEDED by the active Phase 2A bibles
+> (91/80/75/85/70/65/60 + acceptance 51/52) — see the neutralized section below. The
+> **derivative** section remains deferred, preserved for future implementation.
+> **When to use**: For the derivative solver, when starting a later phase. For
+> gradient, use the Phase 2A bibles, not this file.
 > **v3.2 changes**: references/version label only. Content unchanged.
+> **Phase 2A**: gradient section neutralized (superseded pointer); derivative
+> section unchanged.
 
 ---
 
-## Gradient Solver
+## Gradient Solver — SUPERSEDED (see Phase 2A bibles)
 
-### Exercise Input Examples
-
-#### Point to Point
-```json
-{
-  "id": 1,
-  "type": "gradient",
-  "function": "x^2 + y^2",
-  "initial_point": [0, 0],
-  "final_point": [1, 1]
-}
-```
-
-#### Point with Vector Direction
-```json
-{
-  "id": 1,
-  "type": "gradient",
-  "function": "x^2 + y^2",
-  "point": [3, 4],
-  "vector": [1, 2]
-}
-```
-
-#### Point with Angle
-```json
-{
-  "id": 1,
-  "type": "gradient",
-  "function": "x^2 + y^2",
-  "point": [2, 3],
-  "angle": 45
-}
-```
-
-#### Angle with Radians
-```json
-{
-  "id": 1,
-  "type": "gradient",
-  "function": "x^2 + y^2",
-  "point": [2, 3],
-  "angle": "pi/4"
-}
-```
-
-```json
-{
-  "angle": 1.5708,
-  "angle_unit": "radians"
-}
-```
-
-### Gradient Results Structure (Extended JSON)
-```json
-"results": {
-  "problem_latex": "\\nabla f(2,3)",
-  "solution_latex": "\\langle 4, 6 \\rangle",
-  "numeric_value": 7.211102551,
-  "gradient_evaluated": [4, 6],
-  "magnitude": 7.211102551,
-  "unit_vector": [0.5547, 0.8321],
-  "theta_max": 56.31
-}
-```
-
-> **Note for Phase 2**: When implementing gradient, follow the v3.2 formatting
-> ownership rule — the solver stores raw floats and LaTeX; the adapter formats
-> decimals and derives any units. Add `display_gradient` render fields to the
-> render-model contract in 85 before wiring templates.
-
-### Gradient Display Fields (display_gradient)
-```json
-"display_gradient": {
-  "show_magnitude": true,
-  "show_unit_vector": true,
-  "show_theta_max": true,
-  "show_theta_min": false,
-  "show_gradient": true,
-  "show_gradient_evaluated": true,
-  "show_directional_derivative": true,
-  "decimal_places": 5
-}
-```
-
-### Expression Cleaner — Gradient Specifics
-- Clean `function` field
-- Clean angle expressions when they contain math
-- DO NOT process: `point`, `vector` arrays (already numeric)
-- String with "pi" → radians
-- Numeric value → check `angle_unit` field
-- Default: degrees
+> **This section is neutralized.** The gradient solver is now active in Phase 2A;
+> its authoritative contract lives in the active bibles, not here:
+> - Scope: `91_phase2a_gradient_scope_v3_2.md`
+> - Input: `80_json_input_spec_v3_2.md` ("Gradient Solver — Exercise Examples")
+> - Output/results: `75_json_output_spec_v3_2.md` ("Results Structure — Gradient")
+> - Render/display/template: `85_render_adapter_and_jinja2_spec_v3_2.md`,
+>   `70_display_system_v3_2.md`
+> - Cleaner/grouping: `60_expression_cleaner_v3_2.md`, `65_id_system_v3_2.md`
+> - Acceptance: `51_test_data_gradient_v3_2.json`, `52_golden_expected_gradient_v3_2.md`
+>
+> **Choices from the old draft that Phase 2A OVERRODE — do NOT follow them here:**
+> - `numeric_value = magnitude` → Phase 2A uses top-level `numeric_value: null`
+>   plus a `results.gradient` sub-object (authoritative for rendering).
+> - Angle default degrees / `angle_unit` → Phase 2A is **radians only**; no
+>   `angle_unit` field.
+> - `point`/`vector` "already numeric" → Phase 2A uses **cleaned string** entries.
+> - `show_theta_min` → deferred (not in Phase 2A).
+> - Ad-hoc `display_gradient` field list → replaced by the six `show_gradient_*`
+>   flags standardized in 70/50.
 
 ---
 

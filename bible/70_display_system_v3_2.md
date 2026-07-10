@@ -12,6 +12,10 @@
 > `show_id_component_accumulative` removed from Phase 1; component fields wired.
 > **Phase 1.1 amendment**: nothing-to-show clarification for symbolic-only
 > results (see Implementation Notes).
+> **Phase 2A amendment**: adds the top-level `display_gradient` block and its six
+> `show_gradient_*` fields; gradient output is unitless (no `quantity`/units
+> inference). See "Gradient Display Fields (Phase 2A)" below and
+> `91_phase2a_gradient_scope_v3_2.md`. The integral display hierarchy is unchanged.
 
 ---
 
@@ -150,12 +154,44 @@ fields, and are never produced by the solver. See also 90_phase1_scope_v3_2.md.
 
 ### Solver-Specific Fields (Phase 1: none exclusive to integrals)
 
-The integral solver uses only global and component fields. Solver-specific fields
-are used by other solvers (see 09_deferred_solvers_v3_2.md).
+The integral solver uses only global and component fields. The derivative solver
+remains deferred (see 09_deferred_solvers_v3_2.md); the gradient solver is active
+in Phase 2A and introduces `display_gradient` (below).
 
 Note: `display_integral` can still be used in input JSON to override any global
 field specifically for integral exercises. It just doesn't introduce new fields
 unique to integrals.
+
+### Gradient Display Fields (Phase 2A)
+
+`display_gradient` is a **top-level, solver-specific** display block (parallel to
+`display_integral`), specified at the document root — **not** inside exercises.
+Per-exercise gradient overrides use the existing `display_override`.
+
+**Merge chain (gradient exercise):**
+`hardcoded (50) → display_default → display_gradient → display_override`
+
+This is the same generic hierarchy: the solver-specific level is
+`display_{exercise.type}`, which is `display_gradient` when `type == "gradient"`.
+
+| Field | Type | Default | Gates |
+|-------|------|---------|-------|
+| `show_gradient` | bool | true | symbolic `∇f(x, y)` line |
+| `show_gradient_evaluated` | bool | true | `∇f(P)` line (+ its component decimals) |
+| `show_magnitude` | bool | true | `\|∇f(P)\|` line |
+| `show_unit_vector` | bool | true | `û` line |
+| `show_directional_derivative` | bool | true | `D_u f` line |
+| `show_theta_max` | bool | true | `theta_max` line (radians in 2A) |
+
+Defaults live in the single global hardcoded template
+(50_config_defaults_global_v3_2.json); there is no per-solver config file (that is
+deferred, see 08). The global `decimal_places` is reused for gradient decimals.
+
+> **Gradient is unitless in Phase 2A.** Unit derivation and `quantity` inference
+> do **not** apply to gradient; `default_units`, `units_override`, and
+> `quantity_label` have no effect on gradient items. Symbolic-only gradient pieces
+> reach the same nothing-to-show outcome per piece via the adapter's per-piece
+> Numeric-Availability Resolution (see 85).
 
 ---
 
