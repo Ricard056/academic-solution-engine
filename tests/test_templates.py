@@ -6,9 +6,16 @@ error branches, \\mathrm unit wrapping in the TEMPLATE, show_input scoped to
 standard items only (P8), no leading "=" in the numeric-only output branch
 (P7), total_latex under show_component_total (P9), StrictUndefined on every
 render path, string-out-only behavior (no disk writes, no subprocess).
+
+Phase 2A adds the template-routing section (select exclusively by
+document["template"]; absent -> integral back-compat; present-but-invalid ->
+deterministic error) and the gradient template section (six pieces in
+contract order, per-piece show_*/*_numeric gating, error branch reading only
+exercise_label/message, no units/quantity/problem_latex ever rendered).
 """
 
 import ast
+import copy
 from pathlib import Path
 
 import pytest
@@ -107,6 +114,46 @@ def output_group_item(outputs) -> dict:
 
 def render(*items) -> str:
     return render_tex({"document": DOCUMENT, "items": list(items)})
+
+
+GRADIENT_DOCUMENT = {**DOCUMENT, "template": "solucionario_gradientes.tex.j2"}
+
+
+def gradient_item(**overrides) -> dict:
+    """Closed gradient render item (bible 85) with marker values that make
+    presence/absence in the TeX unambiguous."""
+    item = {
+        "kind": "gradient",
+        "exercise_label": "1",
+        "show_gradient": True,
+        "gradient_latex": r"\left\langle GRLATEX \right\rangle",
+        "show_gradient_evaluated": True,
+        "gradient_evaluated_latex": r"\left\langle 8, \; 4 \right\rangle",
+        "gradient_evaluated_numeric": True,
+        "gradient_evaluated_decimal": r"\left\langle 8.0000, \; 4.0000 \right\rangle",
+        "show_magnitude": True,
+        "magnitude_latex": r"4 \sqrt{5}",
+        "magnitude_numeric": True,
+        "magnitude_decimal_string": "8.9443",
+        "show_unit_vector": True,
+        "unit_vector_latex": "UVLATEX",
+        "unit_vector_numeric": True,
+        "unit_vector_decimal": "UVDECIMAL",
+        "show_directional_derivative": True,
+        "directional_derivative_latex": r"6 \sqrt{2}",
+        "directional_derivative_numeric": True,
+        "directional_derivative_decimal_string": "8.4853",
+        "show_theta_max": True,
+        "theta_max_latex": "THETALATEX",
+        "theta_max_numeric": True,
+        "theta_max_decimal_string": "0.4636",
+    }
+    item.update(overrides)
+    return item
+
+
+def render_gradient(*items) -> str:
+    return render_tex({"document": GRADIENT_DOCUMENT, "items": list(items)})
 
 
 # ---------------------------------------------------------------------------
@@ -265,3 +312,147 @@ def test_latex_module_imports_no_subprocess_or_os():
         elif isinstance(node, ast.ImportFrom):
             imported.add((node.module or "").split(".")[0])
     assert imported == {"pathlib", "jinja2"}  # no subprocess, no os, no fileio
+
+
+# ---------------------------------------------------------------------------
+# Template routing (bible 85, Phase 2A): document.template selects, nothing
+# else — absent defaults to integral; present-but-invalid fails loudly
+# ---------------------------------------------------------------------------
+
+def test_missing_template_key_defaults_to_integral():
+    # DOCUMENT has no "template" key: the Phase 1 legacy path.
+    tex = render(standard_item())
+    assert "A = 1 = 1.0000" in tex  # integral standard branch rendered
+
+
+def test_explicit_integral_template_is_byte_identical_to_default():
+    legacy = render_tex({"document": DOCUMENT, "items": [standard_item()]})
+    explicit = render_tex({
+        "document": {**DOCUMENT, "template": "solucionario_integrales.tex.j2"},
+        "items": [standard_item()],
+    })
+    assert explicit == legacy
+
+
+@pytest.mark.parametrize(
+    "bad", [None, "", "tarea_integrales.tex.j2", "nonexistent.tex.j2", 7]
+)
+def test_present_but_invalid_template_fails_deterministically(bad):
+    model = {"document": {**DOCUMENT, "template": bad}, "items": []}
+    with pytest.raises(ValueError, match="unknown render template"):
+        render_tex(model)
+
+
+def test_base_template_is_not_an_accepted_routing_target():
+    # A real file under templates/ is still rejected: the router accepts the
+    # two known template names, not anything loadable.
+    model = {"document": {**DOCUMENT, "template": "base.tex.j2"}, "items": []}
+    with pytest.raises(ValueError, match="unknown render template"):
+        render_tex(model)
+
+
+def test_render_tex_does_not_mutate_render_model():
+    model = {
+        "document": dict(GRADIENT_DOCUMENT),
+        "items": [gradient_item(), dict(ERROR_ITEM)],
+    }
+    snapshot = copy.deepcopy(model)
+    render_tex(model)
+    assert model == snapshot
+
+
+# ---------------------------------------------------------------------------
+# Gradient template (bible 85/52): six pieces in contract order, per-piece
+# gating, error branch, no units/quantity/problem_latex
+# ---------------------------------------------------------------------------
+
+def test_gradient_document_fragments_and_base_inheritance():
+    tex = render_gradient(gradient_item())
+    assert r"\documentclass[12pt]{article}" in tex  # {% extends %} works
+    assert "TAREA 21" in tex
+    assert "Solucionario" in tex
+    assert "Cálculo III" in tex
+    assert r"\section*{Resultados}" in tex
+    assert r"\end{document}" in tex
+
+
+def test_gradient_full_numeric_item_renders_all_six_lines_in_order():
+    tex = render_gradient(gradient_item())
+    assert r"\textbf{ 1) }" in tex
+    markers = [
+        r"\nabla f(x, y) = \left\langle GRLATEX \right\rangle",
+        r"\nabla f(P) = \left\langle 8, \; 4 \right\rangle"
+        r" = \left\langle 8.0000, \; 4.0000 \right\rangle",
+        r"\left| \nabla f(P) \right| = 4 \sqrt{5} = 8.9443",
+        r"\hat{u} = UVLATEX = UVDECIMAL",
+        r"D_{\hat{u}} f = 6 \sqrt{2} = 8.4853",
+        r"\theta_{\max} = THETALATEX = 0.4636",
+    ]
+    positions = [tex.find(marker) for marker in markers]
+    assert all(position >= 0 for position in positions), (markers, positions)
+    assert positions == sorted(positions)  # bible 85 contract order
+
+
+def test_gradient_error_item_reads_only_label_and_message():
+    # ERROR_ITEM carries ONLY kind/exercise_label/message; a successful
+    # StrictUndefined render proves the error branch reads nothing else.
+    tex = render_gradient(dict(ERROR_ITEM))
+    assert r"\textbf{ 9) }" in tex
+    assert "ERROR: no se pudo procesar este ejercicio." in tex
+    assert r"\textcolor{red}" in tex
+
+
+def test_gradient_suppressed_piece_renders_neither_latex_nor_decimal():
+    # G5 shape: absent piece resolved off upstream.
+    item = gradient_item(show_unit_vector=False, unit_vector_numeric=False)
+    tex = render_gradient(item)
+    assert "UVLATEX" not in tex
+    assert "UVDECIMAL" not in tex
+    assert r"\hat{u} =" not in tex
+
+
+def test_gradient_symbolic_piece_renders_latex_without_decimal_tail():
+    # G6 shape: line visible, decimal tail resolved off.
+    item = gradient_item(theta_max_numeric=False, theta_max_decimal_string="")
+    tex = render_gradient(item)
+    assert r"\theta_{\max} = THETALATEX" in tex
+    assert "0.4636" not in tex
+    assert "THETALATEX =" not in tex  # no dangling equals after the symbolic
+
+
+def test_gradient_decimal_gated_by_numeric_flag_not_string_emptiness():
+    item = gradient_item(
+        magnitude_numeric=False, magnitude_decimal_string="GHOSTDECIMAL"
+    )
+    tex = render_gradient(item)
+    assert r"4 \sqrt{5}" in tex  # symbolic line still renders
+    assert "GHOSTDECIMAL" not in tex  # the FLAG gates, not the empty string
+
+
+def test_gradient_hidden_gradient_line():
+    tex = render_gradient(gradient_item(show_gradient=False))
+    assert "GRLATEX" not in tex
+    assert r"\nabla f(x, y) =" not in tex
+
+
+def test_gradient_template_reads_only_declared_fields():
+    # gradient_item() declares NO show_input/problem_latex/units/quantity
+    # fields; a successful StrictUndefined render proves the template never
+    # reads them, and no unit token is ever wrapped.
+    tex = render_gradient(gradient_item())
+    assert r"\mathrm" not in tex
+
+
+def test_gradient_template_strict_undefined_on_missing_field():
+    incomplete = gradient_item()
+    del incomplete["magnitude_decimal_string"]
+    with pytest.raises(UndefinedError):
+        render_gradient(incomplete)
+
+
+def test_gradient_template_ignores_other_item_kinds():
+    # Only kind == "gradient" and kind == "error" render; anything else is
+    # skipped (mixed documents are hard-stopped far upstream, bible 91).
+    tex = render_gradient(standard_item())
+    assert "PROBLEMMARKER" not in tex
+    assert "A = 1" not in tex
