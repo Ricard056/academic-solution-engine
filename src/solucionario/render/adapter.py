@@ -24,6 +24,16 @@ show_numeric to False and decimal_string to "" regardless of the merged
 display config, per standard item / per output member. Component groups
 never reach this: aggregation already refuses a group with a null-numeric
 member, so it has no results.component and collapses to one error item.
+
+Phase 2A (bible 85/91): the "gradient" render item generalizes that rule PER
+PIECE — show_<piece> = author flag AND piece present in results.gradient
+(symbolic never hides the line); <piece>_numeric = show_<piece> AND value
+not null (gates only the decimal tail). Every gradient field is sourced from
+results.gradient, never top-level numeric_value/solution_latex; gradient is
+unitless with no quantity_label and declares no show_input/problem_latex
+(authored show_input is inert by construction). The document block carries
+the bible-85 "template" routing field, derived from the (validated
+single-solver) document's exercise types before any grouping.
 """
 
 from solucionario.display import resolve_display, resolve_group_display
@@ -37,6 +47,7 @@ from solucionario.ids import (
 from solucionario.render.formatting import (
     format_decimal,
     format_operation_decimal_string,
+    format_vector_decimal,
 )
 from solucionario.render.labels import (
     derive_units,
@@ -60,6 +71,10 @@ COURSE_LABELS = {"Calculus 3": "Cálculo III"}
 
 SUBTITLE = "Solucionario"  # fixed Phase 1 string (bible 85)
 
+# bible 85, Template routing (by document solver; single-solver documents).
+INTEGRAL_TEMPLATE = "solucionario_integrales.tex.j2"
+GRADIENT_TEMPLATE = "solucionario_gradientes.tex.j2"
+
 # Bible-50 values used only if the provided defaults template is incomplete.
 _FALLBACKS = {
     "show_input": True,
@@ -71,18 +86,27 @@ _FALLBACKS = {
     "show_component_symbolic": True,
     "show_component_operation": True,
     "show_component_total": True,
+    "show_gradient": True,
+    "show_gradient_evaluated": True,
+    "show_magnitude": True,
+    "show_unit_vector": True,
+    "show_directional_derivative": True,
+    "show_theta_max": True,
 }
 
 
 def build_render_model(extended_json: dict, display_defaults: dict) -> dict:
     """Canonical Extended JSON + hardcoded defaults -> closed render model."""
+    exercises = extended_json.get("exercises") or []
+    document = _document(extended_json.get("metadata") or {})
+    # Template routing field (bible 85): derived from the document's exercise
+    # type set BEFORE grouping/sorting — documents are single-solver (91).
+    document["template"] = _document_template(exercises)
+
     items: list[dict] = []
-    for _key, members in group_exercises(extended_json.get("exercises") or []):
+    for _key, members in group_exercises(exercises):
         items.extend(_group_items(extended_json, display_defaults, members))
-    return {
-        "document": _document(extended_json.get("metadata") or {}),
-        "items": items,
-    }
+    return {"document": document, "items": items}
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +133,16 @@ def _document(metadata: dict) -> dict:
     }
 
 
+def _document_template(exercises: list) -> str:
+    """bible 85: gradient documents use the gradient template; anything else
+    defaults to the integral template (Phase 1 back-compatible). The document
+    is validated single-solver (91), so any gradient exercise decides."""
+    for exercise in exercises:
+        if isinstance(exercise, dict) and exercise.get("type") == "gradient":
+            return GRADIENT_TEMPLATE
+    return INTEGRAL_TEMPLATE
+
+
 # ---------------------------------------------------------------------------
 # Items
 # ---------------------------------------------------------------------------
@@ -130,12 +164,15 @@ def _group_items(extended_json, display_defaults, members) -> list[dict]:
             return [_error_item(label)]  # bible 90 collapse applies to outputs too
         return [_output_group_item(extended_json, display_defaults, members, label)]
     if mode == MODE_STANDARD:
-        return [
-            _error_item(exercise_label(member))
-            if _failed(member)
-            else _standard_item(extended_json, display_defaults, member)
-            for member in members
-        ]
+        items = []
+        for member in members:
+            if _failed(member):
+                items.append(_error_item(exercise_label(member)))
+            elif member.get("type") == "gradient":
+                items.append(_gradient_item(extended_json, display_defaults, member))
+            else:
+                items.append(_standard_item(extended_json, display_defaults, member))
+        return items
     return [_error_item(label)]  # unclassifiable: defensive
 
 
@@ -182,6 +219,63 @@ def _standard_item(extended_json, display_defaults, exercise) -> dict:
         "decimal_string": decimal_string,
         "units": derive_units(quantity_label, settings),
     }
+
+
+# The five valued gradient pieces (bible 85), in render-item order:
+# (piece, raw value key in results.gradient, render decimal field, vector?).
+_GRADIENT_PIECES = (
+    ("gradient_evaluated", "gradient_evaluated_values",
+     "gradient_evaluated_decimal", True),
+    ("magnitude", "magnitude_value", "magnitude_decimal_string", False),
+    ("unit_vector", "unit_vector_values", "unit_vector_decimal", True),
+    ("directional_derivative", "directional_derivative_value",
+     "directional_derivative_decimal_string", False),
+    ("theta_max", "theta_max_value", "theta_max_decimal_string", False),
+)
+
+
+def _gradient_item(extended_json, display_defaults, exercise) -> dict:
+    """Gradient render item (bible 85): every field sourced from
+    results.gradient — never top-level numeric_value/solution_latex. No
+    units, no quantity_label, no show_input/problem_latex (authored
+    show_input is inert by construction).
+
+    Per-piece Numeric-Availability Resolution: show_<piece> = author flag
+    AND piece present (a symbolic value never hides the line);
+    <piece>_numeric = show_<piece> AND value not null (gates only the
+    decimal tail). Closed contract: absent pieces keep every declared field,
+    with show/numeric False and LaTeX/decimal "".
+    """
+    settings = resolve_display(display_defaults, extended_json, exercise)
+    decimal_places = _setting(settings, "decimal_places")
+    gradient = exercise["results"]["gradient"]
+
+    item = {
+        "kind": "gradient",
+        "exercise_label": exercise_label(exercise),
+        # gradient_latex is always present: the author flag alone gates it.
+        "show_gradient": bool(_setting(settings, "show_gradient")),
+        "gradient_latex": gradient["gradient_latex"],
+    }
+    for piece, value_key, decimal_field, is_vector in _GRADIENT_PIECES:
+        latex_key = f"{piece}_latex"
+        present = latex_key in gradient  # omitted key = not applicable (75)
+        show = bool(_setting(settings, f"show_{piece}")) and present
+        value = gradient.get(value_key)
+        numeric = show and value is not None
+
+        item[f"show_{piece}"] = show
+        item[latex_key] = gradient[latex_key] if present else ""
+        item[f"{piece}_numeric"] = numeric
+        if numeric:
+            item[decimal_field] = (
+                format_vector_decimal(value, decimal_places)
+                if is_vector
+                else format_decimal(value, decimal_places)
+            )
+        else:
+            item[decimal_field] = ""  # closed contract: empty, never missing
+    return item
 
 
 def _component_group_item(extended_json, display_defaults, members, label) -> dict:
