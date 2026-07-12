@@ -47,3 +47,18 @@ def format_operation_decimal_string(values, decimal_places: int) -> str:
     """Formatted parts joined with " + " — the Phase 1 sum join used for the
     Total line's operation_decimal_string (bible 85)."""
     return " + ".join(format_decimal(value, decimal_places) for value in values)
+
+
+def format_vector_decimal(values, decimal_places: int) -> str:
+    """Complete decimal vector in the canonical delimiter (bible 85, Phase 2A):
+
+        format_vector_decimal([8.0, 4.0], 4)
+        -> "\\left\\langle 8.0000, \\; 4.0000 \\right\\rangle"
+
+    The vector analogue of format_operation_decimal_string: each component
+    formatted independently by format_decimal (Decimal + ROUND_HALF_UP,
+    trailing zeros kept), order and count preserved, input list untouched.
+    Validation (invalid decimal_places, non-finite components) propagates
+    from format_decimal."""
+    components = [format_decimal(value, decimal_places) for value in values]
+    return r"\left\langle " + r", \; ".join(components) + r" \right\rangle"

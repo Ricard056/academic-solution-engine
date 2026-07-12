@@ -24,6 +24,14 @@ Per-exercise behavior (bible 90 matrix + approved enrichment gates):
   message; processing continues with the next exercise. Solver failures are
   already error results (solve_integral never raises).
 
+Phase 2A (bible 91): _process_exercise dispatches by exercise type. Gradient
+exercises take a parallel path — clean (function, each point/initial_point/
+final_point/vector entry, angle) -> solve_gradient — with NO enrichment:
+quantity, coordinate_system, and units never apply to gradient (91/70).
+Component Aggregation is integral-only; gradient exercises are standard
+items (bible 65) and pass through it untouched. Mixed gradient+integral
+documents are a document-level hard stop inside validate_document (91).
+
 Document-level validation failure raises DocumentValidationError before any
 exercise work: hard stop, nothing produced (bible 55/90).
 """
@@ -36,6 +44,7 @@ from solucionario.extended_json import build_extended_json
 from solucionario.render.adapter import build_render_model
 from solucionario.render.latex import render_tex
 from solucionario.solvers.base import error_result
+from solucionario.solvers.gradient import solve_gradient
 from solucionario.solvers.integral import solve_integral
 from solucionario.validation import validate_document, validate_exercise
 
@@ -110,6 +119,9 @@ def _process_exercise(exercise: dict) -> dict:
         processed["results"] = error_result(message)
         return processed  # no enrichment: possibly structurally incomplete
 
+    if exercise["type"] == "gradient":
+        return _process_gradient_exercise(exercise, processed)
+
     # coordinate_system needs only integrals[].var (validated readable), so
     # it is inferred even if cleaning fails below. Explicit value wins.
     if processed.get("coordinate_system") is None:
@@ -150,4 +162,34 @@ def _process_exercise(exercise: dict) -> dict:
         processed["results"] = solve_integral(
             {**exercise, "function": cleaned_function, "integrals": cleaned_integrals}
         )
+    return processed
+
+
+# Gradient math fields cleaned entry-wise (bible 60, gradient cleaner scope).
+_GRADIENT_COORDINATE_FIELDS = ("point", "initial_point", "final_point", "vector")
+
+
+def _process_gradient_exercise(exercise: dict, processed: dict) -> dict:
+    """Gradient path (bible 91): clean -> solve. Never raises.
+
+    No enrichment: quantity, coordinate_system, and units never apply to
+    gradient (bible 91/70). `processed` keeps the ORIGINAL authored strings
+    (bible 75 reusability); cleaned strings are transient solver input only.
+    Any CleanerError in any math field -> error_result, run continues.
+    """
+    cleaned = {}
+    try:
+        cleaned["function"] = clean_expression(str(exercise["function"]))
+        for field in _GRADIENT_COORDINATE_FIELDS:
+            if exercise.get(field) is not None:
+                cleaned[field] = [
+                    clean_expression(str(entry)) for entry in exercise[field]
+                ]
+        if exercise.get("angle") is not None:
+            cleaned["angle"] = clean_expression(str(exercise["angle"]))
+    except CleanerError as exc:
+        processed["results"] = error_result(str(exc))
+        return processed
+
+    processed["results"] = solve_gradient({**exercise, **cleaned})
     return processed

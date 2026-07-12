@@ -15,6 +15,7 @@ from solucionario.render import formatting
 from solucionario.render.formatting import (
     format_decimal,
     format_operation_decimal_string,
+    format_vector_decimal,
 )
 
 
@@ -118,6 +119,60 @@ def test_operation_join_propagates_validation():
 def test_operation_join_does_not_mutate_input():
     values = [0.5, 0.25]
     format_operation_decimal_string(values, 4)
+    assert values == [0.5, 0.25]
+
+
+# ---------------------------------------------------------------------------
+# format_vector_decimal (bible 85, Phase 2A)
+# ---------------------------------------------------------------------------
+
+def test_vector_decimal_bible_85_example():
+    assert (
+        format_vector_decimal([8.0, 4.0], 4)
+        == r"\left\langle 8.0000, \; 4.0000 \right\rangle"
+    )
+
+
+def test_vector_decimal_g1_unit_vector():
+    assert (
+        format_vector_decimal([0.7071067811865476, 0.7071067811865476], 4)
+        == r"\left\langle 0.7071, \; 0.7071 \right\rangle"
+    )
+
+
+def test_vector_decimal_rounds_half_up_per_component():
+    # Each component independently, ties away from zero on both signs.
+    assert format_vector_decimal([2.5, -2.5], 0) == r"\left\langle 3, \; -3 \right\rangle"
+    assert (
+        format_vector_decimal([0.125, -0.125], 2)
+        == r"\left\langle 0.13, \; -0.13 \right\rangle"
+    )
+
+
+def test_vector_decimal_trailing_zeros_kept():
+    assert (
+        format_vector_decimal([0.25, 1.0], 4)
+        == r"\left\langle 0.2500, \; 1.0000 \right\rangle"
+    )
+
+
+def test_vector_decimal_preserves_order_and_count():
+    assert (
+        format_vector_decimal([3.0, 1.0, 2.0], 1)
+        == r"\left\langle 3.0, \; 1.0, \; 2.0 \right\rangle"
+    )
+
+
+def test_vector_decimal_propagates_validation():
+    with pytest.raises(ValueError, match="non-finite"):
+        format_vector_decimal([1.0, float("nan")], 4)
+    with pytest.raises(ValueError, match="decimal_places"):
+        format_vector_decimal([1.0, 2.0], -1)
+
+
+def test_vector_decimal_does_not_mutate_input():
+    values = [0.5, 0.25]
+    format_vector_decimal(values, 4)
     assert values == [0.5, 0.25]
 
 

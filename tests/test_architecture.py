@@ -45,6 +45,27 @@ def test_solver_modules_do_not_import_render_or_formatting():
     assert offenders == []
 
 
+def test_solver_modules_do_not_import_sibling_solvers():
+    """Solvers are independent modules (bible 99 #5): adding one must never
+    touch or depend on another. Within the solvers package, a solver may
+    import only the package itself, solvers.base (the shared results
+    contract), and its own module — never a sibling solver."""
+    solver_files = sorted(SOLVERS_DIR.glob("*.py"))
+    assert solver_files, f"no solver modules found under {SOLVERS_DIR}"
+
+    offenders = []
+    for path in solver_files:
+        allowed = {"", "base", path.stem}
+        for module in iter_imported_modules(path):
+            parts = module.split(".")
+            if parts[:2] != ["solucionario", "solvers"]:
+                continue
+            submodule = parts[2] if len(parts) > 2 else ""
+            if submodule not in allowed:
+                offenders.append(f"{path.name} imports {module}")
+    assert offenders == []
+
+
 def test_render_adapter_does_not_compute_math():
     """The adapter copies math from results.component and formats — it never
     computes: no SymPy, no solver imports, no aggregation imports (bible 85,

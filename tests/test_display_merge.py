@@ -219,6 +219,14 @@ def test_real_default_config_resolves_to_bible_50_values():
         "show_component_symbolic": True,
         "show_component_operation": True,
         "show_component_total": True,
+        # Phase 2A gradient flags (bible 50/70) — global hardcoded template,
+        # merged into every exercise's resolved config like any other field.
+        "show_gradient": True,
+        "show_gradient_evaluated": True,
+        "show_magnitude": True,
+        "show_unit_vector": True,
+        "show_directional_derivative": True,
+        "show_theta_max": True,
     }
     # _comment/_version/file_naming_mode from the file never merge.
     assert "file_naming_mode" not in resolved

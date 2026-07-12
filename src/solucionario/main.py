@@ -37,8 +37,7 @@ def main(argv=None, *, output_dir=None, compile_pdf_func=None) -> int:
     parser = argparse.ArgumentParser(
         prog="solucionario",
         description=(
-            "Generate a PDF solution manual from a structured exercise JSON "
-            "(Phase 1: integrals)."
+            "Generate a PDF solution manual from a supported math JSON input."
         ),
     )
     parser.add_argument(

@@ -5,6 +5,12 @@ solve -> aggregate -> enrich -> Extended JSON -> adapter -> Jinja2) and locks:
 golden-shaped render items, the revised enrichment gates, cleaner field
 wiring with original-string preservation, Extended JSON purity, input
 immutability, document-level hard stop, and the no-writes scope.
+
+Phase 2A adds the gradient path section (bible 91): type dispatch, gradient
+cleaner routing with authored-string preservation, no enrichment, the
+Extended JSON results.gradient shape, cleaner/solver error flow, and the
+mixed-document hard stop. Gradient RENDER items land in a later batch; here
+only the Extended JSON side of gradient runs is asserted.
 """
 
 import ast
@@ -166,6 +172,22 @@ def test_validation_failure_skips_all_enrichment():
     assert "coordinate_system" not in processed
 
 
+def test_non_string_type_becomes_error_item_and_run_continues():
+    # M18 regression: an unhashable authored type in a non-gradient document
+    # previously escaped shared validation as a raw TypeError and crashed
+    # process_document. It must become one exercise ERROR item while the
+    # rest of the document processes normally.
+    exercises = [
+        {"id": 1, "type": []},
+        {"id": 2, "type": "integral", "function": "1",
+         "integrals": [{"var": "x", "lower": "0", "upper": "1"}]},
+    ]
+    result = run(make_document(exercises))
+    assert exercise_by_id(result, 1)["results"]["status"] == "error"
+    assert "status" not in exercise_by_id(result, 2)["results"]
+    assert items_by_label(result)["1"]["kind"] == "error"
+
+
 def test_explicit_quantity_and_coordinate_system_win():
     exercise = {
         "id": 1, "type": "integral", "quantity": "M", "coordinate_system": "polar",
@@ -310,3 +332,181 @@ def test_pipeline_imports_no_filesystem_or_subprocess():
         elif isinstance(node, ast.ImportFrom):
             imported.add((node.module or "").split(".")[0])
     assert imported == {"time", "solucionario"}  # no subprocess/os/pathlib/shutil
+
+
+# ---------------------------------------------------------------------------
+# Phase 2A gradient path (bible 91): dispatch, cleaning, Extended JSON shape
+# ---------------------------------------------------------------------------
+
+def gradient_exercise(**overrides) -> dict:
+    """A valid gradient exercise whose caret notation only solves if the
+    cleaner ran (function AND point entries); overrides replace or (None)
+    drop keys."""
+    exercise = {
+        "id": 1,
+        "type": "gradient",
+        "function": "x^2 + y^2",
+        "point": ["2^1", "3"],
+    }
+    for key, value in overrides.items():
+        if value is None:
+            exercise.pop(key, None)
+        else:
+            exercise[key] = value
+    return exercise
+
+
+@pytest.fixture(scope="module")
+def gradient_result():
+    return run(make_document([gradient_exercise()]))
+
+
+def test_gradient_flows_to_extended_json(gradient_result):
+    results = exercise_by_id(gradient_result, 1)["results"]
+    assert "status" not in results
+    assert results["numeric_value"] is None  # every gradient SUCCESS (75)
+    gradient = results["gradient"]
+    # Cleaned before solving: f = x^2+y^2 at (2^1, 3) -> ∇f(P) = ⟨4, 6⟩.
+    assert gradient["gradient_evaluated_values"] == [4.0, 6.0]
+    # Non-rendered mirror (bible 75).
+    assert results["solution_latex"] == gradient["gradient_latex"]
+
+    summary = gradient_result["extended_json"]["metadata"]["processing_summary"]
+    assert summary["total_exercises"] == 1
+    assert summary["successful"] == 1
+    assert summary["errors"] == 0
+
+
+def test_gradient_authored_strings_preserved(gradient_result):
+    exercise = exercise_by_id(gradient_result, 1)
+    assert exercise["function"] == "x^2 + y^2"  # cleaned form never persisted
+    assert exercise["point"] == ["2^1", "3"]
+
+
+def test_gradient_gets_no_quantity_or_coordinate_system(gradient_result):
+    # bible 91/70: no quantity, coordinate_system, or unit inference applies.
+    exercise = exercise_by_id(gradient_result, 1)
+    assert "quantity" not in exercise
+    assert "coordinate_system" not in exercise
+
+
+def test_gradient_extended_json_purity(gradient_result):
+    forbidden = {
+        "decimal_string", "units", "exercise_label", "message",
+        "gradient_evaluated_decimal", "unit_vector_decimal",
+        "magnitude_decimal_string", "directional_derivative_decimal_string",
+        "theta_max_decimal_string",
+    }
+
+    def walk(value):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                yield key
+                yield from walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                yield from walk(item)
+
+    keys = list(walk(gradient_result["extended_json"]))
+    assert [k for k in keys if str(k).startswith("_")] == []
+    assert [k for k in keys if k in forbidden] == []
+
+
+def test_every_gradient_math_field_is_cleaned():
+    # Each exercise only produces its expected values if that field was
+    # cleaned: carets for the arrays, ^-1 inverse-trig rewriting for angle.
+    document = make_document(
+        [
+            gradient_exercise(
+                id=1,
+                function="y^2 * exp(x*y)",
+                point=None,
+                initial_point=["0", "2^1"],
+                final_point=["5", "7"],
+            ),
+            gradient_exercise(id=2, vector=["2^2", "0"]),
+            gradient_exercise(id=3, angle="cos^-1(0)"),
+        ]
+    )
+    result = run(document)
+
+    ex1 = exercise_by_id(result, 1)["results"]["gradient"]
+    assert ex1["gradient_evaluated_values"] == [8.0, 4.0]  # P = (0, 2^1=2)
+    ex2 = exercise_by_id(result, 2)["results"]["gradient"]
+    assert ex2["unit_vector_values"] == [1.0, 0.0]  # ⟨2^2, 0⟩ normalized
+    ex3 = exercise_by_id(result, 3)["results"]["gradient"]
+    assert ex3["unit_vector_values"] == [0.0, 1.0]  # θ = acos(0) = π/2
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"function": "2x"},
+        {"point": ["√2", "1"]},
+        {"point": None, "initial_point": ["2x", "0"], "final_point": ["1", "1"]},
+        {"vector": ["2x", "1"]},
+        {"angle": "√2"},
+    ],
+)
+def test_gradient_cleaner_failure_in_any_field_is_error(overrides):
+    result = run(make_document([gradient_exercise(**overrides)]))
+    assert exercise_by_id(result, 1)["results"]["status"] == "error"
+
+
+def test_gradient_cleaner_error_continues_run():
+    document = make_document(
+        [gradient_exercise(id=1, function="2x"), gradient_exercise(id=2)]
+    )
+    result = run(document)
+    assert exercise_by_id(result, 1)["results"]["status"] == "error"
+    assert "status" not in exercise_by_id(result, 2)["results"]
+    summary = result["extended_json"]["metadata"]["processing_summary"]
+    assert summary["successful"] == 1
+    assert summary["errors"] == 1
+
+
+def test_gradient_validation_failure_is_error_result():
+    # E1 shape (bible 51): no point and no two-points pair.
+    result = run(make_document([gradient_exercise(point=None)]))
+    assert exercise_by_id(result, 1)["results"]["status"] == "error"
+
+
+def test_gradient_solver_error_flows_to_error_result():
+    # E2 shape (bible 51): zero-length direction detected by the solver.
+    result = run(
+        make_document([gradient_exercise(point=["1", "1"], vector=["0", "0"])])
+    )
+    assert exercise_by_id(result, 1)["results"]["status"] == "error"
+
+
+def test_mixed_gradient_integral_document_hard_stops(monkeypatch):
+    monkeypatch.setattr(
+        pipeline, "solve_gradient",
+        lambda exercise: pytest.fail("solver must not be called on a hard stop"),
+    )
+    monkeypatch.setattr(
+        pipeline, "solve_integral",
+        lambda exercise: pytest.fail("solver must not be called on a hard stop"),
+    )
+    integral = {
+        "id": 1, "type": "integral", "function": "1",
+        "integrals": [{"var": "x", "lower": "0", "upper": "1"}],
+    }
+    with pytest.raises(DocumentValidationError):
+        run(make_document([integral, gradient_exercise(id=2)]))
+
+
+def test_display_gradient_passes_through_to_extended_json():
+    document = make_document([gradient_exercise()])
+    document["display_gradient"] = {"show_theta_max": False}
+    result = run(document)
+    assert result["extended_json"]["display_gradient"] == {"show_theta_max": False}
+
+
+def test_gradient_input_json_is_not_mutated():
+    document = make_document(
+        [gradient_exercise(), gradient_exercise(id=2, angle="pi/4")]
+    )
+    snapshot = copy.deepcopy(document)
+    run(document)
+    assert document == snapshot
