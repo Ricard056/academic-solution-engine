@@ -86,12 +86,16 @@ def validate_document(data) -> None:
         # type:"gradient" with any other PRESENT type is a hard stop (the
         # template router is undefined for mixed documents). A missing type
         # is not "another type": it stays an exercise-level ERROR.
-        types = {
+        # Equality scans only — authored type values may be unhashable
+        # (e.g. [] or {}), so no set/hash operation is safe here.
+        present_types = [
             exercise.get("type")
             for exercise in exercises
             if isinstance(exercise, dict) and exercise.get("type") is not None
-        }
-        if "gradient" in types and len(types) > 1:
+        ]
+        has_gradient = any(value == "gradient" for value in present_types)
+        has_other_type = any(value != "gradient" for value in present_types)
+        if has_gradient and has_other_type:
             problems.append(
                 "document mixes gradient with other exercise types "
                 "(single-solver documents only in Phase 2A)"
@@ -119,10 +123,15 @@ def validate_exercise(exercise: dict) -> str | None:
 
     if not _has(exercise, "type"):
         return "type is missing"
-    if exercise["type"] not in KNOWN_TYPES:
-        return f"unknown type: {exercise['type']!r}"
+    exercise_type = exercise["type"]
+    # String gate BEFORE the frozenset membership test: authored type values
+    # may be unhashable (e.g. [] or {}) and must error, never raise.
+    if not isinstance(exercise_type, str):
+        return f"type must be a string, got {exercise_type!r}"
+    if exercise_type not in KNOWN_TYPES:
+        return f"unknown type: {exercise_type!r}"
 
-    if exercise["type"] == "gradient":
+    if exercise_type == "gradient":
         return _validate_gradient_fields(exercise)
     return _validate_integral_fields(exercise)
 

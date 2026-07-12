@@ -172,6 +172,22 @@ def test_validation_failure_skips_all_enrichment():
     assert "coordinate_system" not in processed
 
 
+def test_non_string_type_becomes_error_item_and_run_continues():
+    # M18 regression: an unhashable authored type in a non-gradient document
+    # previously escaped shared validation as a raw TypeError and crashed
+    # process_document. It must become one exercise ERROR item while the
+    # rest of the document processes normally.
+    exercises = [
+        {"id": 1, "type": []},
+        {"id": 2, "type": "integral", "function": "1",
+         "integrals": [{"var": "x", "lower": "0", "upper": "1"}]},
+    ]
+    result = run(make_document(exercises))
+    assert exercise_by_id(result, 1)["results"]["status"] == "error"
+    assert "status" not in exercise_by_id(result, 2)["results"]
+    assert items_by_label(result)["1"]["kind"] == "error"
+
+
 def test_explicit_quantity_and_coordinate_system_win():
     exercise = {
         "id": 1, "type": "integral", "quantity": "M", "coordinate_system": "polar",

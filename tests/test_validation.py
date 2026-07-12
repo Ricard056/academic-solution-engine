@@ -162,6 +162,28 @@ def test_gradient_with_missing_type_member_is_not_a_hard_stop():
     validate_document(document)  # must not raise
 
 
+@pytest.mark.parametrize("bad_type", [[], {}])
+def test_mixed_gradient_and_non_string_type_is_hard_stop(bad_type):
+    # An unhashable present type is still "another present type" alongside
+    # gradient: the existing hard stop fires — never a raw TypeError.
+    document = make_document(
+        exercises=[make_gradient_exercise(), make_exercise(id=2, type=bad_type)]
+    )
+    with pytest.raises(DocumentValidationError, match="mixes gradient"):
+        validate_document(document)
+
+
+@pytest.mark.parametrize("bad_type", [[], {}])
+def test_integral_document_with_non_string_type_is_not_a_hard_stop(bad_type):
+    # Without gradient there is no mixing rule: an unhashable type must pass
+    # document-level inspection without crashing and reach exercise-level
+    # validation.
+    document = make_document(
+        exercises=[make_exercise(), make_exercise(id=2, type=bad_type)]
+    )
+    validate_document(document)  # must not raise
+
+
 def test_integral_with_unknown_type_member_is_not_a_hard_stop():
     # Phase 1 behavior preserved: without gradient there is no mixing rule.
     document = make_document(
@@ -187,11 +209,19 @@ def test_missing_type_is_exercise_error():
     assert validate_exercise(make_exercise(type=None)) == "type is missing"
 
 
-@pytest.mark.parametrize("bad_type", ["derivative", "Integral", 7])
+@pytest.mark.parametrize("bad_type", ["derivative", "Integral"])
 def test_unknown_type_is_exercise_error(bad_type):
     # "derivative" is a deferred solver (bible 09) — unknown. "gradient" is a
     # known type since Phase 2A (bible 91).
     assert "unknown type" in validate_exercise(make_exercise(type=bad_type))
+
+
+@pytest.mark.parametrize("bad_type", [7, [], {}])
+def test_non_string_type_is_exercise_error(bad_type):
+    # Non-string type values (including unhashable [] / {}) must come back
+    # as a validation ERROR, never escape as a raw TypeError.
+    message = validate_exercise(make_exercise(type=bad_type))
+    assert "type must be a string" in message
 
 
 def test_missing_function_is_exercise_error():
