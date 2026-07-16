@@ -108,6 +108,32 @@ A future solver must add its row there explicitly.
 
 ---
 
+## Adding a future solver (bounded registration path)
+
+A future solver adds a new fragment and registry entry **only when it
+introduces a new render-item presentation contract**; a solver whose output
+exactly satisfies an existing presentation contract **reuses** that contract's
+`item.kind`, fragment, and registry entry (85). In both cases it must NOT edit
+existing solver modules, the neutral document shell, or existing fragments.
+
+The bounded registration steps are, exhaustively:
+
+1. spec-phase bible additions (scope, amendments, acceptance data + golden,
+   display flags in 50 if the solver adds any);
+2. a new solver module importing only the shared results contract;
+3. known-type registration + a solver-specific exercise validator;
+4. a supported-mode row in the 65 table (explicit declaration);
+5. a cleaner route and solver dispatch entry;
+6. an adapter item builder + emittable-kind registration;
+7. a renderer registry entry + fragment (only for a new presentation
+   contract — see above);
+8. tests. A new formatting helper is justified only for a genuinely new
+   output value shape.
+
+This is a closed checklist, not a plugin framework (excluded above).
+
+---
+
 ## Rendering architecture (Alternative 3)
 
 - One **neutral document shell** (extends `base.tex.j2`) with **no `item.kind`
