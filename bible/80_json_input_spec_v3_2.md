@@ -9,6 +9,11 @@
 > Cartesian, radians only; string point/vector coordinates; four direction modes
 > plus point-only). See "Gradient Solver — Exercise Examples" below and
 > `91_phase2a_gradient_scope_v3_2.md`. The integral contract is unchanged.
+> **Phase 2B-M amendment**: documents may now mix recognized solver types — the
+> single-solver-document prohibition is superseded (annotated below). Adds the
+> "Multi-Solver Documents (Phase 2B-M)" section and layered validation authority
+> pointers. The integral and gradient field contracts are unchanged. See
+> `92_phase2bm_multisolver_scope_v3_2.md`.
 
 ## Field Optionality Rules
 
@@ -268,6 +273,11 @@ coordinates.
 A document mixing `type: "gradient"` with any other exercise type is a
 **document-level hard stop** in 2A (single-solver documents only — see 91).
 
+> **SUPERSEDED (Phase 2B-M):** the sentence above is retained as Phase 2A
+> history only. Mixed-solver documents are now supported — see
+> `92_phase2bm_multisolver_scope_v3_2.md` and "Multi-Solver Documents
+> (Phase 2B-M)" below. There is no document-level type-mixing hard stop.
+
 ### Mode 1 — Two points (`initial_point` → `final_point`)
 ```json
 {
@@ -345,6 +355,38 @@ Gradient visibility is controlled by a **top-level** `display_gradient` block
   }
 }
 ```
+
+---
+
+## Multi-Solver Documents (Phase 2B-M)
+
+> Milestone scope: `92_phase2bm_multisolver_scope_v3_2.md`. Group rules:
+> `65_id_system_v3_2.md` (authoritative — this section only summarizes).
+
+- **Documents may freely interleave exercises of recognized solver types**
+  (Phase 2B-M: `integral` and `gradient`) under one valid document envelope.
+  Document-tier validation keeps only the envelope rules: required metadata
+  fields, a non-empty `exercises` array, and a present `id` per exercise.
+  There is no document-level type-mixing hard stop.
+- **Per-exercise validation is unchanged and solver-specific**: each exercise
+  is validated by its own solver's static matrix (90 for integral, 91 for
+  gradient).
+- **D2**: one `(id, id_letter)` group may not contain two different recognized
+  solver identities, in any structural mode. The recognized-identity
+  definition, precedence, and the complete cardinality matrix live in 65.
+- **Malformed `type` values** (missing, `null`, non-string, unknown string)
+  are always exercise-level authored errors, never a document stop. A document
+  whose every exercise is malformed still processes to an all-error document
+  (see 92).
+- **Simultaneous `display_integral` and `display_gradient`** blocks are both
+  honored in one document: each exercise resolves display through
+  `display_{its own type}` (70); the blocks never interfere with each other.
+- **Authored input can never select or influence presentation routing**: no
+  input field participates in the choice of document shell, item fragments, or
+  renderer registry. The render model is built exclusively by the Render
+  Adapter (85).
+- **All-error documents**: behavior (summary semantics, TeX/PDF attempts, CLI
+  exit) is owned by 92.
 
 ---
 
@@ -454,7 +496,13 @@ hard stop (see 90_phase1_scope_v3_2.md). A non-numeric `id`, missing/unknown
 `type`, missing/malformed solver fields → exercise-level ERROR. Group-structure
 problems (sequence gaps, duplicate or mixed IDs, both `id_component`+`id_output`,
 conflicting component quantities, invalid `component_operation`) → group-level
-ERROR. See the full validation matrix in 90_phase1_scope_v3_2.md.
+ERROR. Layered validation authority (Phase 2B-M): `90_phase1_scope_v3_2.md`
+remains the Phase 1 **Integral** validation contract (frozen);
+`91_phase2a_gradient_scope_v3_2.md` remains the **Gradient** exercise-validation
+contract; `65_id_system_v3_2.md` owns **D2, supported modes, precedence, and
+group/cardinality behavior**; `92_phase2bm_multisolver_scope_v3_2.md` owns the
+**Phase 2B-M milestone and mixed-document behavior**. This checklist points to
+those owners; it never duplicates their matrices.
 
 ### Integral Solver Required Fields
 - `function` (string)

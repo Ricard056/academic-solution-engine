@@ -82,6 +82,17 @@ Original input remains untouched
 > untouched. Exercise-level and group-level failures continue and produce ERROR
 > items. See 90_phase1_scope_v3_2.md.
 
+### Internal rendering failures (Phase 2B-M)
+
+- Rendering completes fully in memory before any output writing (92/85).
+- An internal rendering failure (see 92/85 for the taxonomy) creates **no** new
+  JSON/TeX/PDF output and overwrites **no** existing output; pre-existing
+  outputs remain unchanged by that failed invocation.
+- PDF-compilation failure is unchanged: it occurs after JSON/TeX generation and
+  retains those derivatives per this file's existing policy.
+- General temp-file/atomic-replacement infrastructure remains out of scope for
+  Phase 2B-M.
+
 ### If Output Exists
 - DO overwrite output files (they are regenerated, not precious)
 - DO NOT prompt for confirmation

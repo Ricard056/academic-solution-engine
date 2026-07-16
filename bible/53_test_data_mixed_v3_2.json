@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "institution": "itson",
+    "course_code": "c3",
+    "course": "Calculus 3",
+    "assignment": {
+      "type": "hw",
+      "number": 9013,
+      "year": 2026,
+      "month": 7,
+      "iteration": 1
+    },
+    "file_naming_mode": "testing",
+    "notes": "Phase 2B-M mixed-contract acceptance data (bible 92). Every case is exact frozen reuse with only the local id changed: id 1 = 46 Ex 1 (integral standard, A = 1); id 2 = 51 G1 (gradient two-points anchor); id 3 = 46 Ex 5 members (integral component group, 1/2 + 1/2 = 1); id 4 = 51 G6 (gradient symbolic point); id 5 = 46 Ex 6 members (integral output group); id 6 = 48 Ex 1 (symbolic integral, result a*b); id 7 = 46 Ex 9 (function \"2x\" - INTENDED error). Canonical order interleaves solver types (I, G, I, G, I, I, I) and cannot be produced by solver partitioning. Expected render-model values are in 54_golden_expected_mixed_v3_2.md. Member summary: 9 total / 8 successful / 1 error. Bibles 45-52 remain frozen; no D2-invalid group is included (D2 matrix coverage is unit-test scope, bible 65)."
+  },
+  "display_default": {
+    "show_input": true,
+    "decimal_places": 4
+  },
+  "display_integral": {
+    "show_input": false
+  },
+  "display_gradient": {
+    "show_gradient": true,
+    "show_gradient_evaluated": true,
+    "show_magnitude": true,
+    "show_unit_vector": true,
+    "show_directional_derivative": true,
+    "show_theta_max": true
+  },
+  "exercises": [
+    {
+      "id": 1,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "gradient",
+      "function": "y**2 * exp(x*y)",
+      "initial_point": ["0", "2"],
+      "final_point": ["5", "7"]
+    },
+    {
+      "id": 3,
+      "id_component": 1,
+      "type": "integral",
+      "quantity": "A",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "x"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "id_component": 2,
+      "type": "integral",
+      "quantity": "A",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "2 - x"
+        },
+        {
+          "var": "x",
+          "lower": "1",
+          "upper": "2"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "gradient",
+      "function": "x**2 + y**2",
+      "point": ["a", "b"]
+    },
+    {
+      "id": 5,
+      "id_output": 1,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "id_output": 2,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "1",
+          "upper": "2"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "integral",
+      "function": "1",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "a"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "b"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "integral",
+      "function": "2x",
+      "integrals": [
+        {
+          "var": "y",
+          "lower": "0",
+          "upper": "1"
+        },
+        {
+          "var": "x",
+          "lower": "0",
+          "upper": "1"
+        }
+      ]
+    }
+  ]
+}

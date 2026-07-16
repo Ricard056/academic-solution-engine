@@ -8,6 +8,13 @@
 > its acceptance (46/47), and the symbolic-only contract (48/49) are unchanged.
 > Adding the gradient solver must not modify existing solvers or templates
 > (project overview 99, success criteria #4/#5).
+> **Phase 2B-M note**: exactly three single-solver-document clauses in this file
+> (the single-solver rendering restriction, the document-level mixed-type hard
+> stop, and the mixed-document deferral — each individually annotated below) are
+> SUPERSEDED by `92_phase2bm_multisolver_scope_v3_2.md`. Everything else in this
+> file remains authoritative Phase 2A history, including all gradient
+> mathematics, validation, standard-items-only capability, outputs, display,
+> Extended JSON behavior, and the frozen 51/52 acceptance.
 
 ---
 
@@ -107,6 +114,9 @@ symbolic successes.
 - **Single-solver documents only in 2A** — a document contains gradient exercises
   or integral exercises, not both. Mixed-solver documents are deferred to 2B.
 
+  > **SUPERSEDED by 92 (Phase 2B-M):** mixed-solver documents are now
+  > supported; rendering uses the neutral shell + item-fragment contract of 85.
+
 ### ID / grouping / aggregation
 - Gradient supports **standard items only** in 2A.
 - A gradient member carrying `id_component` **or** `id_output` makes the whole
@@ -123,6 +133,9 @@ symbolic successes.
   - the document mixes `type: "gradient"` with any other exercise type —
     single-solver documents only in 2A; the template router is undefined for
     mixed documents, so this is a hard stop, not a per-exercise error.
+
+    > **SUPERSEDED by 92 (Phase 2B-M):** the document-tier mixing hard stop is
+    > removed; group-tier D2/supported-mode rules (65) govern mixed documents.
 - **Exercise-level (render that one exercise as `kind:"error"`)**:
   - `type` is `"gradient"` but `function` is missing/not a string;
   - no evaluation point (neither `point` nor a complete
@@ -167,6 +180,9 @@ symbolic successes.
 - **`id_output`/`id_component` for gradient**.
 - **Polar/cylindrical/spherical gradients.**
 - **Mixed-solver documents** (gradient + integral in one document).
+
+  > **SUPERSEDED by 92 (Phase 2B-M):** implemented by Phase 2B-M; no longer
+  > deferred.
 - **Derivative solver** (still deferred; see 09).
 
 ---

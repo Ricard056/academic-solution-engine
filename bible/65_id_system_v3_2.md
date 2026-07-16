@@ -10,6 +10,12 @@
 > member carrying `id_component` or `id_output` is a group-level ERROR (see
 > "Gradient (Phase 2A)" below and `91_phase2a_gradient_scope_v3_2.md`). Aggregation
 > stays integral-only. Integral grouping rules are unchanged.
+> **Phase 2B-M amendment**: this file is now the single authoritative owner of the
+> multi-solver group contract — recognized solver identity, the D2 rule and its
+> precedence and cardinality matrix, the supported-mode table, and the canonical
+> ordering guarantees (see "Multi-Solver Groups (Phase 2B-M)" below). Milestone
+> scope lives in `92_phase2bm_multisolver_scope_v3_2.md`. Integral and gradient
+> grouping rules themselves are unchanged.
 
 ## Core ID Fields
 
@@ -152,6 +158,95 @@ independent-outputs (`id_output`) applies.
 
 The `id_output` example above uses `type:"derivative"` (still deferred) purely to
 illustrate the independent-outputs concept; it is not a gradient pattern.
+
+> **Phase 2B-M note**: the group-error rule above is the `gradient → {standard}`
+> row of the single authoritative supported-mode table in the **following
+> "Multi-Solver Groups (Phase 2B-M)" section below**.
+
+---
+
+## Multi-Solver Groups (Phase 2B-M)
+
+> Milestone scope: `92_phase2bm_multisolver_scope_v3_2.md`. This section is the
+> **single authoritative owner** of the rules below; 92 and 80 summarize and
+> point here — they never carry a second copy.
+
+### Recognized solver identity
+
+- A **raw authored `type` token** is any JSON value in the `type` field. A
+  **recognized solver identity** is a **string** value belonging to the closed
+  active solver set (Phase 2B-M: `integral`, `gradient`).
+- Missing, `null`, non-string, and unknown-string tokens have **no** recognized
+  identity. They remain exercise-level authored validation failures — never a
+  document-level stop.
+- Two equal unknown tokens never form a recognized identity ("a raw unknown
+  token does not become a valid solver merely because two members share it").
+- Identity comparison uses **equality scans only** — authored values may be
+  unhashable (e.g. `[]`, `{}`), so no set/hash operation is ever applied to them.
+
+### D2 — one recognized solver identity per group
+
+Every member of one `(id, id_letter)` group must share one recognized solver
+identity. A group may never contain two different recognized identities — in
+**any** structural mode (standard, component, or output).
+
+### Precedence (evaluated per group, in order)
+
+1. Exercise validation classifies each member (authored-input failures).
+2. Structural-mode coherence is evaluated for the full group.
+3. D2 is evaluated over recognized solver identities.
+4. Solver structural capability is evaluated (supported-mode table below).
+5. Mode-specific sequence, duplicate, operation, quantity, and solved-member
+   rules are evaluated.
+6. The render adapter applies the resulting group-versus-member error
+   cardinality.
+
+### Cardinality matrix (authoritative)
+
+| Group composition | D2 | Standard mode | Component/output mode |
+|---|---|---|---|
+| Integral + Gradient recognized identities | violated | one group error | one group error |
+| One recognized + one unknown string | not violated | valid item + one exercise error | one group error |
+| One recognized + missing `type` | not violated | valid item + one exercise error | one group error |
+| One recognized + `null` | not violated | valid item + one exercise error | one group error |
+| One recognized + number/array/object | not violated | valid item + one exercise error | one group error |
+| Only one unknown string | n/a | one exercise error | one group error if structurally grouped |
+| Two equal unknown strings | n/a | two exercise errors | one group error |
+| Two different unknown strings | n/a | two exercise errors | one group error |
+| Only missing/null/non-string values | n/a | one exercise error per member | one group error |
+| ≥3 members incl. Integral and Gradient, with or without malformed members | violated | one group error | one group error |
+| ≥3 members, one recognized solver + malformed members | not violated | recognized members render + individual malformed-member errors | one group error |
+| Any composition also mixing standard/component/output modes | structural violation | one group error | one group error |
+
+Additionally: a member of a solver used in a structural mode outside that
+solver's supported set (table below) makes the whole group **one group error**.
+
+The same visible one-group-error card may have several internal causes.
+Detailed diagnostics stay internal; only the generic render marker appears
+(bible 85).
+
+### Supported-mode table (single authoritative copy)
+
+| Solver | Supported structural modes |
+|---|---|
+| `integral` | standard, component, output |
+| `gradient` | standard |
+
+This table is owned by the validation layer and is the capability registry a
+future solver must extend **explicitly** with its own row. Component
+Aggregation remains Integral-only; component mathematics never moves into the
+adapter or Jinja (90/92).
+
+### Ordering guarantees (Phase 2B-M contractual)
+
+- Canonical ordering is unchanged: `(id, id_letter)` groups by defensive
+  numeric `id` rank then `id_letter`; members by `id_component` / `id_output`.
+- **Stable authored relative order is contractual for members with identical
+  complete structural keys.**
+- A collapsed group error occupies exactly **one** structural output position
+  for its group.
+- Solver identity never participates in any sorting or grouping key.
+- No solver partitioning occurs before or after canonical structural ordering.
 
 ---
 

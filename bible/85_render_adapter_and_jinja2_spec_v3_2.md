@@ -18,6 +18,18 @@
 > solver, and the single-solver-document restriction. See "Gradient Support
 > (Phase 2A)" below and `91_phase2a_gradient_scope_v3_2.md`. Integral items,
 > decimal formatting, and the existing item types are unchanged.
+> *(Phase 2B-M: the "template routing by document solver" and
+> "single-solver-document restriction" parts of the amendment above are
+> SUPERSEDED — see the Phase 2B-M amendment next.)*
+> **Phase 2B-M amendment**: documents may mix solvers. Full-document
+> solver-specific routing is replaced by ONE neutral document shell + five
+> closed item fragments selected per `item.kind` through a closed
+> Python-controlled registry — see "Document Shell and Item Fragments
+> (Phase 2B-M)" below and `92_phase2bm_multisolver_scope_v3_2.md`. The general
+> display hierarchy is stated generically (`display_{exercise.type}`), the
+> adapter-emittable item list is the authoritative five kinds, and
+> **StrictUndefined is mandatory in production**. All item-shape contracts and
+> formatting rules are unchanged.
 
 ---
 
@@ -95,8 +107,13 @@ The adapter receives Extended JSON and returns a render model. It must:
 4. Resolve display settings using the required hierarchy:
    - hardcoded defaults
    - `display_default`
-   - `display_integral`
+   - `display_{exercise.type}` (e.g. `display_integral`, `display_gradient`)
    - `display_override`
+
+   Group-level display for `component_group`/`output_group` items still
+   resolves from the merged hardcoded → `display_default` → `display_integral`
+   chain: component and output groups remain Integral-only capabilities
+   (supported-mode table, bible 65).
 
 5. Resolve quantity label:
    - `display_override.quantity_label` if present
@@ -107,10 +124,12 @@ The adapter receives Extended JSON and returns a render model. It must:
 
 7. Produce all formatted decimals (see "Decimal Formatting Rule" below).
 
-8. Create render item types:
+8. Create render item types (the authoritative adapter-emittable kind set —
+   Phase 2B-M):
    - `standard`
    - `component_group`
    - `output_group`
+   - `gradient`
    - `error`
 
 9. Never omit failed exercises:
@@ -266,9 +285,10 @@ adapter; the model handed to Jinja2 is already fully resolved.
 Templates are rendered with `undefined=StrictUndefined` during development and
 testing. A reference to a missing render-model field raises an error rather than
 rendering empty. This converts "silently dropped label/decimal" bugs into
-immediate, locatable failures. Production may relax this only after the contract
-is verified against the golden reference (see 90_phase1_scope_v3_2.md and
-47_golden_expected_v3_2.md).
+immediate, locatable failures. **StrictUndefined is mandatory for the universal
+production renderer (Phase 2B-M): every shell and fragment render — in
+development, testing, AND production — uses `StrictUndefined`. No relaxation is
+permitted.**
 
 ---
 
@@ -535,6 +555,12 @@ renders no unit token.
 
 ### Template routing (by document solver)
 
+> **SUPERSEDED (Phase 2B-M):** routing one complete template per document
+> solver is replaced by the neutral shell + item-fragment contract — see
+> "Document Shell and Item Fragments (Phase 2B-M)" below and
+> `92_phase2bm_multisolver_scope_v3_2.md`. The text of this subsection is
+> retained as Phase 2A history only.
+
 Because adding a solver must not modify the existing integral template
 (project overview 99, #4/#5), gradient uses its **own** template and the renderer
 **routes**:
@@ -553,6 +579,113 @@ Because adding a solver must not modify the existing integral template
 > not the spec milestone. This section is the contract they must satisfy: the
 > template is zero-logic (only boolean `show_*` checks and LaTeX echo), and every
 > field it reads is declared on the gradient item above.
+
+---
+
+## Document Shell and Item Fragments (Phase 2B-M)
+
+> Milestone scope: `92_phase2bm_multisolver_scope_v3_2.md`. This section is the
+> normative rendering contract for multi-solver documents. It replaces the
+> superseded "Template routing (by document solver)" subsection above. Exact
+> shell identifiers, fragment filenames, exception-class names, and separator
+> bytes are implementation precision, not fixed here.
+
+### Neutral shell and closed fragments
+
+- ONE neutral production **document shell** (extends `base.tex.j2`) carries the
+  document header and the Resultados section. The shell contains **no
+  `item.kind` branching**.
+- **Five closed item fragments**, one per render-item presentation contract:
+  `standard`, `component_group`, `output_group`, `gradient`, `error`. Each
+  fragment carries the existing item markup — the presentation contract,
+  visible mathematical content, and logical line order of the item types
+  defined in this file. (Byte-verbatim extraction from the legacy templates is
+  the recommended migration technique; reviewed whitespace-only differences
+  are permitted per the compatibility oracle in 92.)
+
+### `item.kind` is a closed presentation contract
+
+- `item.kind` identifies a **closed presentation contract** — never a solver
+  identity, structural mode, or mathematical family.
+- A future solver may emit an existing kind (e.g. `standard`) **only** if it
+  populates exactly the same fields with the same semantics. Otherwise it
+  registers a new kind. Solver identity is never passed into a fragment to
+  branch inside one kind.
+- The adapter's emittable kind set is closed and declared (responsibility 8
+  above); the renderer registry must cover it **exactly**, and a mandatory
+  architecture test fails on any drift.
+
+### Closed fragment registry and preflight
+
+- The renderer holds a **Python literal closed mapping** `item.kind → fragment
+  name`. Values are literals; **no path is ever constructed from authored or
+  render-model data**.
+- **Complete whole-list preflight** runs before any fragment render and is
+  position-independent (the entire item list is examined):
+  1. the shell identifier is validated — an absent `document.template` means
+     the one default neutral shell; a present but invalid/null/non-string/
+     unknown value is a deterministic internal failure;
+  2. `items` must be a list;
+  3. every `item.kind` must be present, a string, and in the registry;
+  4. the shell and every registry fragment must resolve and load.
+
+### Environment and contexts
+
+- One Jinja `Environment` per render invocation, shared by the shell and all
+  fragments; `StrictUndefined`; `autoescape=False`; no process-global
+  singleton.
+- Fragment context is exactly `{item}` — fragments never receive
+  document-level context.
+- Shell context is exactly `{document, rendered_items}`. `rendered_items` is
+  an **ephemeral internal presentation representation** (the rendered fragment
+  bodies in item order). It is never authored input and is **never persisted —
+  Extended JSON never contains shell, fragment, registry, or routing metadata,
+  nor `rendered_items`** (75/92).
+
+### Composition
+
+- Fragments render in `render_model["items"]` list order; bodies are joined
+  with one documented fixed separator/newline policy (exact bytes chosen at
+  implementation to reproduce the current inter-item shape).
+- **No second escaping pass** is applied to rendered LaTeX. Fragment output is
+  arbitrary valid LaTeX content, not line-only text.
+
+### Failure attribution and internal-failure taxonomy
+
+- An internal fragment failure re-raises with the item index,
+  `exercise_label`, `kind`, and fragment identity, preserving the original
+  cause. A shell failure after successful fragment renders is the same
+  internal failure class.
+- **Internal rendering failures** (all deterministic): missing, `null`,
+  non-string, or unknown `item.kind`; an adapter-emittable kind absent from
+  the registry; a stale registry entry; a missing fragment file; invalid shell
+  metadata; a StrictUndefined contract failure.
+- Internal failures are **never** converted to the generic academic ERROR
+  item. They abort **before any output writing** — no complete TeX string
+  exists until every fragment and the shell render successfully — so they
+  create or overwrite no output file (55/92). The CLI reports a clean failure
+  and exits nonzero (92).
+
+### Shell metadata semantics
+
+- `document.template` is **internal presentation metadata** naming the
+  document shell. It is produced only by the adapter; authored input can never
+  set or override it. Absent → the one default neutral shell; present but
+  invalid → deterministic internal failure; identifiers are closed and
+  allowlisted; no filesystem path derives from the value. The field name is
+  retained (no rename in Phase 2B-M).
+
+### Adding a render kind (bounded registration)
+
+- A new render kind requires exactly: one new fragment file, one new registry
+  entry, and the coverage-test update. **Existing fragments and the shell are
+  never edited for a new kind.**
+- A future solver whose output exactly satisfies an existing presentation
+  contract **reuses** that contract's `item.kind`, fragment, and registry
+  entry — a new fragment and registry entry are required **only** for a new
+  presentation contract. The full third-solver registration path (validation,
+  cleaner route, dispatch, adapter builder, supported-mode row, acceptance) is
+  owned by 92/65.
 
 ---
 
@@ -586,18 +719,18 @@ Templates must NOT:
 
 ---
 
-## Required Templates for Phase 1
+## Required Templates (Phase 2B-M production set)
 
-```
-templates/base.tex.j2
-templates/solucionario_integrales.tex.j2
-```
+- `templates/base.tex.j2` (unchanged)
+- ONE neutral document shell (extends `base.tex.j2`; no `item.kind` branching)
+- Five item fragments: `standard`, `component_group`, `output_group`,
+  `gradient`, `error` (exact filenames are implementation precision)
 
-Optional after MVP:
-
-```
-templates/tarea_integrales.tex.j2
-```
+The legacy full-document templates (`solucionario_integrales.tex.j2`,
+`solucionario_gradientes.tex.j2`) are **temporary migration oracles only**
+after production cutover — never alternate production paths — and are deleted
+at Phase 2B-M closeout after the deletion gate passes (92). Document variants
+(e.g. `tarea_*` templates) remain out of scope (92).
 
 ---
 
@@ -624,6 +757,13 @@ templates/tarea_integrales.tex.j2
 ---
 
 ## Minimal `solucionario_integrales.tex.j2`
+
+> **Historical / migration reference only (Phase 2B-M):** after production
+> cutover this full-document template is NOT a required production template.
+> It remains during the migration window as a comparison oracle and as the
+> source markup for the item fragments (its item branches define the
+> presentation contracts the fragments carry), and it is deleted at closeout
+> per the deletion gate in 92.
 
 ```jinja2
 {% extends "base.tex.j2" %}
