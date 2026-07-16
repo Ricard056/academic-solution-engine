@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Navigation map for `academic-solution-engine`, a long-term academic math solution
-generator. Current v3.2 scope: ITSON Calculus 3 *solucionario* generation. This is a MAP,
+generator. Current v3.2 scope: ITSON Calculus 3 *solucionario* generation,
+including Phase 2B-M multi-solver documents. This is a MAP,
 **not** a spec. The authoritative rules live in `bible/*_v3_2.md`. When this file
 and a bible file disagree, the bible wins. Read the relevant bible file before
 implementing any stage. Do not paraphrase a rule from memory — open the file.
@@ -10,7 +11,8 @@ implementing any stage. Do not paraphrase a rule from memory — open the file.
 This is a CLI tool: structured JSON calculus exercises → SymPy-solved results →
 Jinja2/LaTeX → PDF solution manuals. Single user, Spanish (es-MX) output. Phase 1
 solves integrals (frozen); Phase 1.1 added symbolic-only integral results; Phase
-2A adds a 2-variable Cartesian gradient solver (spec in `bible/91`). See
+2A adds a 2-variable Cartesian gradient solver (spec in `bible/91`); Phase 2B-M
+adds mixed Integral+Gradient documents (spec in `bible/92`). See
 `bible/99_project_overview_v3_2.md`.
 
 ## Pipeline (Phase 1)
@@ -20,14 +22,18 @@ Jinja2/LaTeX → PDF
 
 Phase 2A adds a gradient path by `type` dispatch: the Gradient Solver replaces the
 Integral Solver per exercise, Component Aggregation is skipped (integral-only), and
-the Render Adapter emits a `"gradient"` item rendered by a gradient template chosen
-via a `render/latex.py` router. Documents are single-solver in 2A. (91)
+the Render Adapter emits a `"gradient"` item. Phase 2B-M makes documents
+multi-solver: exercise types interleave freely in canonical (id, id_letter) order,
+one recognized solver identity per group (D2 + supported modes, 65), and rendering
+uses one neutral document shell + closed per-kind item fragments selected by a
+closed `render/latex.py` registry. (91, 92, 85)
 
 ## Where to look
 | Need | Bible file |
 |---|---|
 | Scope: what is IN/OUT of Phase 1 | `90_phase1_scope_v3_2.md` |
 | Scope: what is IN/OUT of Phase 2A (gradient) | `91_phase2a_gradient_scope_v3_2.md` |
+| Scope: what is IN/OUT of Phase 2B-M (multi-solver) | `92_phase2bm_multisolver_scope_v3_2.md` |
 | Vision & key design decisions | `99_project_overview_v3_2.md` |
 | Input JSON structure & syntax | `80_json_input_spec_v3_2.md` |
 | Extended JSON (output) schema | `75_json_output_spec_v3_2.md` |
@@ -40,6 +46,7 @@ via a `render/latex.py` router. Documents are single-solver in 2A. (91)
 | Golden acceptance values | `47_golden_expected_v3_2.md` |
 | Symbolic-contract acceptance (Phase 1.1) | `48_test_data_symbolic_v3_2.json` / `49_golden_expected_symbolic_v3_2.md` |
 | Gradient-contract acceptance (Phase 2A) | `51_test_data_gradient_v3_2.json` / `52_golden_expected_gradient_v3_2.md` |
+| Mixed-contract acceptance (Phase 2B-M) | `53_test_data_mixed_v3_2.json` / `54_golden_expected_mixed_v3_2.md` |
 | Test data (real T21 / edge cases) | `45_*.json` / `46_*.json` |
 | Deferred — DO NOT BUILD | `08_*` ; `09_*_v3_2.md` (derivative only; 09 gradient superseded by Phase 2A) |
 
@@ -66,13 +73,16 @@ via a `render/latex.py` router. Documents are single-solver in 2A. (91)
    contract: every declared field must be populated by the adapter. (85)
 8. **Solvers: integrals (Phase 1) + 2-var Cartesian gradient (Phase 2A).** One
    generic recursive integrator handles 1D/2D/3D — do NOT add a separate
-   single-integral solver. The gradient solver is spec'd in Phase 2A; build it per
-   `91` without modifying the integral solver or the integral template
-   (99 #4/#5) — gradient gets its own template + a `render/latex.py` router. (90, 91)
+   single-integral solver. Rendering is one neutral shell + per-kind item
+   fragments behind a closed `render/latex.py` registry — adding a solver never
+   edits existing solvers, existing fragments, or the shell; a new fragment +
+   registry entry is needed ONLY for a NEW presentation contract, and every
+   solver declares its supported modes in 65. (90, 91, 92, 85)
 9. **Do not implement deferred features.** No `show_steps`/`show_all`/
    interpretations, no `component_operation` other than `"sum"`, no derivative
    solver, no 3D/polar gradients, no degree input/display, no `angle_unit` or
-   `variables` field, no mixed-solver documents. (08, 09, 91)
+   `variables` field. (08, 09, 91 — mixed-solver documents are now IN scope
+   since Phase 2B-M, see 92)
 
 ## Acceptance
 A correct first run matches `47_golden_expected_v3_2.md` for Ex 1, 7, 5, 6, 9 of
@@ -82,13 +92,17 @@ Phase 1.1 (symbolic-only contract): once implemented, `49_*.md` over `48_*.json`
 must also pass, with 46/47 remaining frozen. (48, 49)
 Phase 2A (gradient contract): once implemented, `52_*.md` over `51_*.json` must
 also pass, with 46/47 and 48/49 remaining frozen. (51, 52, 91)
+Phase 2B-M (mixed contract): once implemented, `54_*.md` over `53_*.json` must
+also pass, with 46/47, 48/49, and 51/52 remaining frozen. (53, 54, 92)
 
 ## Project layout
 - `src/solucionario/` — pipeline stages (`validation`, `cleaner`, `display`,
   `ids`, `solvers/`, `aggregation`, `extended_json`, `render/`, `fileio`).
-- `templates/` — `base.tex.j2`, `solucionario_integrales.tex.j2` (loader root; no subdir).
-  Phase 2A adds `solucionario_gradientes.tex.j2` (created in the gradient
-  implementation milestone; `solvers/gradient.py` likewise). (91)
+- `templates/` — `base.tex.j2` + the Phase 2B-M production set: one neutral
+  document shell + per-kind item fragments (loader root; no subdir; created in
+  the 2B-M implementation milestone). The legacy full-document templates
+  (`solucionario_integrales.tex.j2`, `solucionario_gradientes.tex.j2`) remain
+  only as temporary migration oracles and are deleted at 2B-M closeout. (85, 92)
 - `config/display_defaults/default.json` — runtime copy of `bible/50`, kept
   identical by `tests/test_config_matches_bible.py`.
 - `inputs/` (read-only, gitignored) · `outputs/` (generated, gitignored) · `tests/`.
