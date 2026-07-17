@@ -9,6 +9,12 @@
 > acceptance in `51`/`52`. It is added without modifying the integral solver or
 > template (success criteria #4/#5). Phase 1 (integrals) and Phase 1.1 (symbolic)
 > are unchanged.
+> **Phase 2B-M note**: multi-solver documents are now an active development
+> phase — one document may mix Integral and Gradient exercises in canonical
+> interleaved order. Scope lives in `92_phase2bm_multisolver_scope_v3_2.md`;
+> acceptance in `53`/`54`. Rendering uses one neutral document shell plus closed
+> per-kind item fragments (85). Phase 1, Phase 1.1, and Phase 2A solver
+> mathematics and acceptance are unchanged.
 
 ## What Is This Project
 
@@ -55,6 +61,8 @@ or unreliable copy-paste from computational tools.
 - **Phase 1 solver**: Integrals (see 90_phase1_scope_v3_2.md)
 - **Phase 2A solver**: Gradient — 2-variable, Cartesian (see
   91_phase2a_gradient_scope_v3_2.md)
+- **Phase 2B-M**: multi-solver documents — Integral + Gradient interleaved in
+  one document (see 92_phase2bm_multisolver_scope_v3_2.md)
 - **Future solvers**: Derivatives, 3D gradients (see 09_deferred_solvers_v3_2.md
   for the deferred derivative spec; 09's gradient section is superseded by Phase 2A)
 - **No frontend**: Command-line only
@@ -98,12 +106,22 @@ or unreliable copy-paste from computational tools.
 7. **coordinate_system is computationally passive in Phase 1** — author supplies the Jacobian
 8. **Closed render-model contract + StrictUndefined** — missing render fields fail loudly, not silently
 9. **Fail gracefully** — One bad exercise doesn't stop the entire assignment
+10. **Render items are closed presentation contracts (Phase 2B-M)** — one
+    neutral document shell plus per-kind item fragments selected through a
+    closed Python registry render every document. A future solver introduces a
+    new fragment and registry entry **only when it introduces a new render-item
+    presentation contract**; a solver that exactly satisfies an existing
+    contract reuses that contract's `item.kind`, fragment, and registry entry.
+    In either case, adding a solver edits no existing solver module, not the
+    neutral shell, and no existing fragment — and declares its supported
+    structural modes explicitly (65) plus the bounded registration steps (92).
 
 ## Bible Files Structure
 
 | File | Responsibility |
 |------|---------------|
 | 99_project_overview_v3_2 (this file) | Project context and vision |
+| 92_phase2bm_multisolver_scope_v3_2 | Phase 2B-M scope lock (multi-solver documents) |
 | 91_phase2a_gradient_scope_v3_2 | Phase 2A gradient scope lock (parallel to 90) |
 | 90_phase1_scope_v3_2 | What's in/out for current development phase |
 | 85_render_adapter_and_jinja2_spec_v3_2 | Adapter contract, formatting ownership, templates |
@@ -113,6 +131,8 @@ or unreliable copy-paste from computational tools.
 | 65_id_system_v3_2 | Exercise identification concepts |
 | 60_expression_cleaner_v3_2 | Mathematical expression preprocessing |
 | 55_file_handling_v3_2 | File operation safety rules |
+| 54_golden_expected_mixed_v3_2 | Expected render-model values for the mixed contract (Phase 2B-M) |
+| 53_test_data_mixed_v3_2.json | Mixed-contract acceptance data (Phase 2B-M) |
 | 52_golden_expected_gradient_v3_2 | Expected render-model values for the gradient contract (Phase 2A) |
 | 51_test_data_gradient_v3_2.json | Gradient-contract test data (Phase 2A) |
 | 50_config_defaults_global_v3_2.json | Machine-readable default display values |
