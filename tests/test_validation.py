@@ -487,7 +487,8 @@ def test_inferred_quantity_conflict_is_group_error():
 
 
 # ---------------------------------------------------------------------------
-# Group tier — gradient is standard-items-only (bible 91/65, Phase 2A)
+# Group tier — supported-mode capability (bible 65 table; supersedes the
+# Phase 2A "standard-items-only" wording; cardinality unchanged)
 # ---------------------------------------------------------------------------
 
 def test_gradient_standard_group_is_valid():
@@ -496,5 +497,179 @@ def test_gradient_standard_group_is_valid():
 
 @pytest.mark.parametrize("field", ["id_component", "id_output"])
 def test_gradient_with_grouping_field_is_group_error(field):
+    # Re-targeted to the bible 65 supported-mode table (gradient -> {standard});
+    # the whole group is still exactly one group error.
     members = [make_gradient_exercise(**{field: 1})]
-    assert "standard-items-only" in validate_group(members)
+    assert "does not support" in validate_group(members)
+
+
+def test_supported_mode_table_matches_bible_65():
+    from solucionario.validation import SUPPORTED_MODES
+
+    assert SUPPORTED_MODES == {
+        "integral": frozenset({"standard", "component", "output"}),
+        "gradient": frozenset({"standard"}),
+    }
+
+
+def test_supported_mode_unknown_identity_never_hits_the_table():
+    # A member with no recognized identity (unknown/missing/non-string type)
+    # must never key into SUPPORTED_MODES: the group verdict here is None and
+    # the member stays an exercise-level failure (adapter applies step 6).
+    members = [
+        make_exercise(id_component=1, type="bogus"),
+        make_exercise(id_component=2, type="bogus"),
+    ]
+    assert validate_group(members) is None
+
+
+def test_supported_mode_precedes_mode_specific_rules():
+    # Step 4 (capability) fires before step 5 (sequence rules): a gradient
+    # component pair with a sequence gap reports the capability problem.
+    members = [
+        make_gradient_exercise(id_component=1),
+        make_gradient_exercise(id_component=3),
+    ]
+    assert "does not support" in validate_group(members)
+
+
+# ---------------------------------------------------------------------------
+# Group tier — D2: one recognized solver identity per group (bible 65,
+# Phase 2B-M) and the authoritative cardinality matrix. validate_group owns
+# precedence steps 2-5; rows whose visible outcome is produced by adapter
+# cardinality (step 6) assert the None verdict that feeds it.
+# ---------------------------------------------------------------------------
+
+def null_type_exercise(**overrides) -> dict:
+    """An integral-shaped exercise whose authored type is JSON null."""
+    exercise = make_exercise(**overrides)
+    exercise["type"] = None
+    return exercise
+
+
+def test_d2_integral_plus_gradient_standard_group_is_group_error():
+    members = [make_exercise(), make_gradient_exercise()]
+    assert "mixes recognized solver identities" in validate_group(members)
+
+
+@pytest.mark.parametrize("field", ["id_component", "id_output"])
+def test_d2_integral_plus_gradient_grouped_mode_is_group_error(field):
+    # D2 (step 3) fires before supported-mode capability (step 4): the mixed
+    # identities are reported even though gradient also lacks the mode.
+    members = [
+        make_exercise(**{field: 1}),
+        make_gradient_exercise(**{field: 2}),
+    ]
+    assert "mixes recognized solver identities" in validate_group(members)
+
+
+def test_d2_structural_coherence_precedes_identity_uniformity():
+    # Step 2 fires before step 3: mixed structural modes are reported even
+    # when the group also mixes recognized identities.
+    members = [make_exercise(id_component=1), make_gradient_exercise()]
+    assert "mixes standard/component/output modes" in validate_group(members)
+
+
+def test_d2_recognized_plus_unknown_string_is_not_a_d2_violation():
+    # Matrix row: one recognized + one unknown string -> standard mode keeps
+    # the valid item; the unknown member is an exercise-level failure.
+    members = [make_exercise(), make_exercise(type="bogus")]
+    assert validate_group(members) is None
+
+
+def test_d2_recognized_plus_missing_type_is_not_a_d2_violation():
+    members = [make_exercise(), make_exercise(type=None)]  # drops the key
+    assert validate_group(members) is None
+
+
+def test_d2_recognized_plus_null_type_is_not_a_d2_violation():
+    members = [make_exercise(), null_type_exercise()]
+    assert validate_group(members) is None
+
+
+@pytest.mark.parametrize("bad_type", [7, [], {}])
+def test_d2_recognized_plus_non_string_type_is_not_a_d2_violation(bad_type):
+    members = [make_exercise(), make_exercise(type=bad_type)]
+    assert validate_group(members) is None
+
+
+def test_d2_recognized_plus_unknown_in_component_mode_returns_none():
+    # Matrix row (component/output mode): the visible one-group-error card
+    # comes from the failed member at adapter cardinality (step 6), not from
+    # a group-structure verdict here.
+    members = [
+        make_exercise(id_component=1),
+        make_exercise(id_component=2, type="bogus"),
+    ]
+    assert validate_group(members) is None
+
+
+def test_d2_single_unknown_string_returns_none():
+    assert validate_group([make_exercise(type="bogus")]) is None
+    assert validate_group([make_exercise(id_component=1, type="bogus")]) is None
+
+
+def test_d2_two_equal_unknown_strings_never_form_an_identity():
+    # "A raw unknown token does not become a valid solver merely because two
+    # members share it" (bible 65).
+    members = [make_exercise(type="bogus"), make_exercise(type="bogus")]
+    assert validate_group(members) is None
+
+
+def test_d2_two_different_unknown_strings_returns_none():
+    members = [make_exercise(type="bogus"), make_exercise(type="fake")]
+    assert validate_group(members) is None
+
+
+def test_d2_only_malformed_type_members_returns_none():
+    members = [
+        make_exercise(type=None),  # missing
+        null_type_exercise(),  # null
+        make_exercise(type=7),  # non-string
+    ]
+    assert validate_group(members) is None
+
+
+def test_d2_three_members_with_both_identities_and_malformed_is_group_error():
+    members = [make_exercise(), make_gradient_exercise(), make_exercise(type=[])]
+    assert "mixes recognized solver identities" in validate_group(members)
+
+
+def test_d2_three_members_one_identity_plus_malformed_returns_none():
+    members = [make_exercise(), make_exercise(type=[]), null_type_exercise()]
+    assert validate_group(members) is None
+
+
+# ---------------------------------------------------------------------------
+# Group tier — equality-scan safety for unhashable authored tokens (bible 65:
+# no set/hash operation is ever applied to raw type values)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("token", [[], {}, ["gradient"], {"type": "integral"}])
+def test_unhashable_tokens_in_standard_groups_never_raise(token):
+    members = [make_exercise(), make_exercise(type=token)]
+    assert validate_group(members) is None
+
+
+@pytest.mark.parametrize("token", [[], {}])
+def test_unhashable_tokens_in_component_groups_never_raise(token):
+    members = [
+        make_exercise(id_component=1),
+        make_exercise(id_component=2, type=token),
+    ]
+    assert validate_group(members) is None
+
+
+@pytest.mark.parametrize("token", [[], {}])
+def test_unhashable_tokens_in_output_groups_never_raise(token):
+    members = [
+        make_exercise(id_output=1),
+        make_exercise(id_output=2, type=token),
+    ]
+    assert validate_group(members) is None
+
+
+@pytest.mark.parametrize("token", [[], {}])
+def test_unhashable_token_alongside_gradient_is_not_a_d2_violation(token):
+    members = [make_gradient_exercise(), make_exercise(type=token)]
+    assert validate_group(members) is None
