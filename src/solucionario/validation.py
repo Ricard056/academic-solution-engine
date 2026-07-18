@@ -5,7 +5,9 @@ Phase 2A gradient matrix of bible/91_phase2a_gradient_scope_v3_2.md with the
 required-field rules of bible/80_json_input_spec_v3_2.md:
 
 - Document tier — validate_document() RAISES DocumentValidationError. The
-  caller must abort the whole run and write no output (bible 55).
+  caller must abort the whole run and write no output (bible 55). Envelope
+  rules only: since Phase 2B-M (bible 92) there is no document-tier
+  type-mixing rule — solver identity is a group-tier concern (D2, bible 65).
 - Exercise tier — validate_exercise() returns a diagnostic message or None.
   The caller marks that one exercise as ERROR and continues.
 - Group tier — validate_group() returns a diagnostic message or None for the
@@ -113,25 +115,6 @@ def validate_document(data) -> None:
                 problems.append(f"exercise at index {index} is not an object")
             elif not _has(exercise, "id"):
                 problems.append(f"exercise at index {index} is missing id")
-
-        # Phase 2A (bible 91): single-solver documents only — mixing
-        # type:"gradient" with any other PRESENT type is a hard stop (the
-        # template router is undefined for mixed documents). A missing type
-        # is not "another type": it stays an exercise-level ERROR.
-        # Equality scans only — authored type values may be unhashable
-        # (e.g. [] or {}), so no set/hash operation is safe here.
-        present_types = [
-            exercise.get("type")
-            for exercise in exercises
-            if isinstance(exercise, dict) and exercise.get("type") is not None
-        ]
-        has_gradient = any(value == "gradient" for value in present_types)
-        has_other_type = any(value != "gradient" for value in present_types)
-        if has_gradient and has_other_type:
-            problems.append(
-                "document mixes gradient with other exercise types "
-                "(single-solver documents only in Phase 2A)"
-            )
 
     if problems:
         raise DocumentValidationError("; ".join(problems))

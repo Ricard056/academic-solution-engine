@@ -29,6 +29,9 @@ PROCESSED_INFO = {
 # Render/template fields that must never appear anywhere in Extended JSON.
 # (units_override / quantity_label inside display_override are INPUT fields
 # and are legitimate; the exact keys below are adapter/render-model-only.)
+# Phase 2B-M (bible 92 "Extended JSON non-persistence"): shell, fragment,
+# registry, and routing metadata spellings — and rendered_items — are
+# forbidden in any position.
 FORBIDDEN_KEYS = {
     "decimal_string",
     "total_decimal_string",
@@ -37,6 +40,14 @@ FORBIDDEN_KEYS = {
     "exercise_label",
     "output_label",
     "message",
+    "template",
+    "rendered_items",
+    "fragment",
+    "fragments",
+    "fragment_registry",
+    "registry",
+    "shell",
+    "shell_name",
 }
 
 

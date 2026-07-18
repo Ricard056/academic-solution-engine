@@ -8,9 +8,10 @@ immutability, document-level hard stop, and the no-writes scope.
 
 Phase 2A adds the gradient path section (bible 91): type dispatch, gradient
 cleaner routing with authored-string preservation, no enrichment, the
-Extended JSON results.gradient shape, cleaner/solver error flow, and the
-mixed-document hard stop. Gradient RENDER items land in a later batch; here
-only the Extended JSON side of gradient runs is asserted.
+Extended JSON results.gradient shape, and cleaner/solver error flow.
+Phase 2B-M (bible 92) removes the mixed-document hard stop: mixed
+gradient+integral documents process end to end with both solvers running
+and items emitted in canonical order.
 """
 
 import ast
@@ -479,21 +480,22 @@ def test_gradient_solver_error_flows_to_error_result():
     assert exercise_by_id(result, 1)["results"]["status"] == "error"
 
 
-def test_mixed_gradient_integral_document_hard_stops(monkeypatch):
-    monkeypatch.setattr(
-        pipeline, "solve_gradient",
-        lambda exercise: pytest.fail("solver must not be called on a hard stop"),
-    )
-    monkeypatch.setattr(
-        pipeline, "solve_integral",
-        lambda exercise: pytest.fail("solver must not be called on a hard stop"),
-    )
+def test_mixed_gradient_integral_document_processes_both_solvers():
+    # INVERTED lock (bible 92, supersedes 91): mixed documents process end
+    # to end — both solvers run and both items are emitted in canonical
+    # (id, id_letter) order with no solver partitioning.
     integral = {
         "id": 1, "type": "integral", "function": "1",
         "integrals": [{"var": "x", "lower": "0", "upper": "1"}],
     }
-    with pytest.raises(DocumentValidationError):
-        run(make_document([integral, gradient_exercise(id=2)]))
+    result = run(make_document([integral, gradient_exercise(id=2)]))
+    items = result["render_model"]["items"]
+    assert [i["exercise_label"] for i in items] == ["1", "2"]
+    assert [i["kind"] for i in items] == ["standard", "gradient"]
+    summary = result["extended_json"]["metadata"]["processing_summary"]
+    assert summary["total_exercises"] == 2
+    assert summary["successful"] == 2
+    assert summary["errors"] == 0
 
 
 def test_display_gradient_passes_through_to_extended_json():

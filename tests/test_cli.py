@@ -168,6 +168,32 @@ def test_exercise_errors_still_exit_zero(tmp_path, capsys):
     assert "1 error(s)" in capsys.readouterr().out
 
 
+def test_all_error_document_exits_zero_with_all_artifacts(tmp_path, capsys):
+    # bible 92 "All-error authored documents": authored academic failures
+    # alone are data outcomes — exit 0, Extended JSON + TeX written, PDF
+    # compilation attempted, member-based summary with successful: 0, one
+    # generic marker per standard-mode member.
+    second_broken = {**BROKEN_EXERCISE, "id": 10}
+    input_path = write_input(tmp_path, exercises=[BROKEN_EXERCISE, second_broken])
+    out_dir = tmp_path / "out"
+    compiler = fake_compiler()
+
+    code = main([str(input_path)], output_dir=out_dir, compile_pdf_func=compiler)
+
+    assert code == 0
+    extended = json.loads(
+        (out_dir / "itson_c3_hw_1_extended.json").read_text(encoding="utf-8")
+    )
+    summary = extended["metadata"]["processing_summary"]
+    assert summary["total_exercises"] == 2
+    assert summary["successful"] == 0
+    assert summary["errors"] == 2
+    tex = (out_dir / "itson_c3_hw_1.tex").read_text(encoding="utf-8")
+    assert tex.count("ERROR: no se pudo procesar este ejercicio.") == 2
+    assert compiler.calls == [out_dir / "itson_c3_hw_1.tex"]  # PDF attempted
+    assert "0/2 exercises solved, 2 error(s)" in capsys.readouterr().out
+
+
 # ---------------------------------------------------------------------------
 # pdflatex failure
 # ---------------------------------------------------------------------------

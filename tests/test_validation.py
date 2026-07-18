@@ -2,8 +2,11 @@
 
 Covers the validation matrix in bible/90_phase1_scope_v3_2.md — document-level
 hard stops, exercise-level ERROR triggers, and group-level ERROR triggers —
-plus the Phase 2A gradient matrix of bible/91_phase2a_gradient_scope_v3_2.md
-(mixed-document hard stop, gradient static checks, standard-items-only rule).
+plus the Phase 2A gradient static checks of bible/91 and the Phase 2B-M
+multi-solver rules of bible/92 and bible/65: the document tier carries
+envelope rules only (mixed-solver documents are valid — the Phase 2A
+mixed-document hard stop is removed), while D2 identity uniformity and the
+supported-mode table live at the group tier.
 """
 
 import pytest
@@ -136,22 +139,25 @@ def test_all_gradient_document_passes():
     validate_document(document)  # must not raise
 
 
-def test_mixed_gradient_and_integral_document_is_hard_stop():
-    # bible 91: single-solver documents only in Phase 2A.
+def test_mixed_gradient_and_integral_document_passes():
+    # INVERTED lock (bible 92, supersedes 91): the Phase 2A mixed-document
+    # hard stop is removed — the document tier carries no type-mixing rule.
+    # Solver-identity safety is group-tier D2 (bible 65).
     document = make_document(
         exercises=[make_exercise(), make_gradient_exercise(id=2)]
     )
-    with pytest.raises(DocumentValidationError, match="mixes gradient"):
-        validate_document(document)
+    validate_document(document)  # must not raise
 
 
-def test_mixed_gradient_and_unknown_type_document_is_hard_stop():
-    # "any other exercise type" (bible 91) includes unknown type strings.
+def test_mixed_gradient_and_unknown_type_document_passes():
+    # INVERTED lock (bible 92/65): an unknown string has no recognized
+    # identity — it stays an exercise-level failure and never forms a
+    # document-level stop.
     document = make_document(
         exercises=[make_gradient_exercise(), make_exercise(id=2, type="bogus")]
     )
-    with pytest.raises(DocumentValidationError, match="mixes gradient"):
-        validate_document(document)
+    validate_document(document)  # must not raise
+    assert validate_exercise(document["exercises"][1]) is not None
 
 
 def test_gradient_with_missing_type_member_is_not_a_hard_stop():
@@ -163,14 +169,16 @@ def test_gradient_with_missing_type_member_is_not_a_hard_stop():
 
 
 @pytest.mark.parametrize("bad_type", [[], {}])
-def test_mixed_gradient_and_non_string_type_is_hard_stop(bad_type):
-    # An unhashable present type is still "another present type" alongside
-    # gradient: the existing hard stop fires — never a raw TypeError.
+def test_mixed_gradient_and_non_string_type_document_passes(bad_type):
+    # INVERTED lock (bible 92/65): a non-string token — including unhashable
+    # [] / {} — has no recognized identity and stays an exercise-level
+    # failure; document validation passes without ever hashing the authored
+    # token (equality-scan safety retained).
     document = make_document(
         exercises=[make_gradient_exercise(), make_exercise(id=2, type=bad_type)]
     )
-    with pytest.raises(DocumentValidationError, match="mixes gradient"):
-        validate_document(document)
+    validate_document(document)  # must not raise
+    assert validate_exercise(document["exercises"][1]) is not None
 
 
 @pytest.mark.parametrize("bad_type", [[], {}])

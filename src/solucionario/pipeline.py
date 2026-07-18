@@ -30,7 +30,10 @@ final_point/vector entry, angle) -> solve_gradient — with NO enrichment:
 quantity, coordinate_system, and units never apply to gradient (91/70).
 Component Aggregation is integral-only; gradient exercises are standard
 items (bible 65) and pass through it untouched. Mixed gradient+integral
-documents are a document-level hard stop inside validate_document (91).
+documents are supported since Phase 2B-M (bible 92): exercise types
+interleave freely in canonical (id, id_letter) order, dispatch stays
+per-exercise, and group-tier D2/supported-mode validation (bible 65) owns
+solver-identity safety.
 
 Document-level validation failure raises DocumentValidationError before any
 exercise work: hard stop, nothing produced (bible 55/90).
