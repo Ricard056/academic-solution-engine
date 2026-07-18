@@ -17,15 +17,14 @@ rendered LaTeX. Internal failures are deterministic InternalRenderError with
 per-item attribution (index, exercise_label, kind, fragment) and are never
 converted to academic ERROR items (bible 92 trust boundaries).
 
-Shell selection (bible 85 shell metadata semantics, production since the
-Phase 2B-M cutover): the shell is selected EXCLUSIVELY by
-render_model["document"]["template"] — never inferred from items or exercise
-data. An absent key means the one default neutral shell (Phase 1 render
-models carry no template field); a present but null/non-string/unknown value
-is a deterministic InternalRenderError, never a silent fallback.
-Migration-window exception (removed at Phase 2B-M closeout): the two legacy
-full-document template names remain renderable for test/comparison use only
-— the production adapter never emits them after cutover.
+Shell selection (bible 85 shell metadata semantics): the shell is selected
+EXCLUSIVELY by render_model["document"]["template"] — never inferred from
+items or exercise data. An absent key means the one default neutral shell
+(Phase 1 render models carry no template field); a present but
+null/non-string/unknown value is a deterministic InternalRenderError, never
+a silent fallback. The universal shell/fragment path is the ONLY rendering
+path (bible 92): the legacy full-document templates were deleted at the
+Phase 2B-M deletion gate.
 
 String-out only: no file writing, no output paths, no pdflatex — those are
 pipeline/fileio responsibilities (M7B). The optional templates_dir parameter
@@ -57,14 +56,6 @@ FRAGMENT_REGISTRY = {
     "error": "item_error.tex.j2",
 }
 
-# Migration window only (bible 92, legacy-template lifecycle): the legacy
-# full-document templates stay routable until the Phase 2B-M deletion gate
-# passes; they are never a production path after cutover.
-TEMPLATE_NAME = "solucionario_integrales.tex.j2"
-GRADIENT_TEMPLATE_NAME = "solucionario_gradientes.tex.j2"
-KNOWN_TEMPLATES = frozenset({TEMPLATE_NAME, GRADIENT_TEMPLATE_NAME})
-
-
 class InternalRenderError(RuntimeError):
     """Deterministic internal rendering failure (bible 85/92).
 
@@ -83,16 +74,6 @@ def render_tex(render_model: dict, templates_dir=TEMPLATES_DIR) -> str:
         undefined=StrictUndefined,
         autoescape=False,
     )
-    # Migration-window legacy branch (bible 92, deleted in the Batch F
-    # deletion commit): the legacy full-document templates stay renderable
-    # for test/comparison use only — production never stamps these names.
-    name = render_model["document"].get("template")
-    if isinstance(name, str) and name in KNOWN_TEMPLATES:
-        template = environment.get_template(name)
-        return template.render(
-            document=render_model["document"],
-            items=render_model["items"],
-        )
     return _render_universal(render_model, environment)
 
 

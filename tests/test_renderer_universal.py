@@ -9,13 +9,13 @@ blank-line separator policy (byte-equivalent to the legacy inter-item
 shape), fragment context exactly {item}, shell context exactly
 {document, rendered_items}, non-mutation, and string-out behavior.
 
-Migration-window note (bible 92): in this window the universal path is
-reachable only through an explicit document.template == SHELL_NAME; absent
-template still routes to the legacy integral template (locked by
-tests/test_templates.py, untouched). _shell_name carries the FINAL shell
-metadata semantics (absent -> neutral shell; invalid -> internal failure)
-and is exercised directly here until the Batch D cutover re-points the
-public route.
+The universal shell/fragment path is the ONLY rendering path (bible 92):
+_shell_name carries the shell metadata semantics (absent -> neutral shell;
+invalid -> internal failure) for every render_tex invocation. The
+migration-only byte-equivalence comparisons against the legacy
+full-document templates were retired with those templates at the Batch F
+deletion gate; the fixed-separator lock below remains the permanent
+composition witness.
 """
 
 import copy
@@ -132,10 +132,9 @@ def test_fragment_registry_is_the_closed_five_kind_mapping():
 
 
 def test_known_shells_contains_exactly_the_neutral_shell():
-    assert SHELL_NAME in KNOWN_SHELLS
-    # Legacy full-document templates are never shells, in any window.
-    assert "solucionario_integrales.tex.j2" not in KNOWN_SHELLS
-    assert "solucionario_gradientes.tex.j2" not in KNOWN_SHELLS
+    # Closed one-shell rule (bible 85/92): the shell allowlist is EXACTLY
+    # the one neutral universal shell — nothing else is ever a shell.
+    assert KNOWN_SHELLS == frozenset({SHELL_NAME})
 
 
 # ---------------------------------------------------------------------------
@@ -210,9 +209,7 @@ def test_explicit_neutral_shell_is_accepted():
 
 
 @pytest.mark.parametrize(
-    "bad",
-    [None, "", 7, "nonexistent.tex.j2", "base.tex.j2",
-     "solucionario_integrales.tex.j2", "solucionario_gradientes.tex.j2"],
+    "bad", [None, "", 7, "nonexistent.tex.j2", "base.tex.j2"]
 )
 def test_invalid_shell_metadata_is_internal_failure(bad):
     with pytest.raises(InternalRenderError, match="invalid document shell metadata"):
@@ -275,28 +272,10 @@ def test_shell_receives_no_raw_items_context(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Fixed separator policy and legacy byte equivalence (bible 85 composition)
+# Fixed separator policy (bible 85 composition). The migration-only
+# byte-equivalence comparisons against the legacy full-document templates
+# were retired together with those templates at the Batch F deletion gate.
 # ---------------------------------------------------------------------------
-
-def test_universal_integral_output_is_byte_identical_to_legacy():
-    items = [standard_item(), ERROR_ITEM]
-    legacy = render_tex({"document": dict(DOCUMENT), "items": copy.deepcopy(items)})
-    assert render_universal(*copy.deepcopy(items)) == legacy
-
-
-def test_universal_gradient_output_is_byte_identical_to_legacy():
-    items = [gradient_item(), ERROR_ITEM]
-    legacy = render_tex({
-        "document": {**DOCUMENT, "template": "solucionario_gradientes.tex.j2"},
-        "items": copy.deepcopy(items),
-    })
-    assert render_universal(*copy.deepcopy(items)) == legacy
-
-
-def test_universal_empty_document_is_byte_identical_to_legacy():
-    legacy = render_tex({"document": dict(DOCUMENT), "items": []})
-    assert render_universal() == legacy
-
 
 def test_fixed_blank_line_separator_between_items():
     """The documented separator policy: every fragment body is framed by the

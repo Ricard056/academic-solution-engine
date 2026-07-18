@@ -338,18 +338,6 @@ def test_missing_template_key_defaults_to_neutral_shell():
     assert "A = 1 = 1.0000" in tex  # standard fragment rendered
 
 
-def test_explicit_integral_template_is_byte_identical_to_default():
-    # Migration-window smoke lock (retired with the legacy template in Batch
-    # F): the legacy integral full-document template still renders and stays
-    # byte-identical to the universal default path.
-    legacy = render_tex({
-        "document": {**DOCUMENT, "template": "solucionario_integrales.tex.j2"},
-        "items": [standard_item()],
-    })
-    default = render_tex({"document": DOCUMENT, "items": [standard_item()]})
-    assert default == legacy
-
-
 @pytest.mark.parametrize(
     "bad", [None, "", "tarea_integrales.tex.j2", "nonexistent.tex.j2", 7]
 )
@@ -466,15 +454,3 @@ def test_gradient_template_strict_undefined_on_missing_field():
     with pytest.raises(InternalRenderError) as excinfo:
         render_gradient(incomplete)
     assert isinstance(excinfo.value.__cause__, UndefinedError)
-
-
-def test_gradient_template_ignores_other_item_kinds():
-    # LEGACY full-document template behavior (migration window only; this
-    # test is retired together with the template in Batch F): the legacy
-    # gradient template renders only kind == "gradient" / "error" branches.
-    tex = render_tex({
-        "document": {**DOCUMENT, "template": "solucionario_gradientes.tex.j2"},
-        "items": [standard_item()],
-    })
-    assert "PROBLEMMARKER" not in tex
-    assert "A = 1" not in tex
