@@ -352,9 +352,13 @@ def test_processing_summary_counts(golden_run):
     assert summary["errors"] == 2
 
 
-def test_document_routes_to_gradient_template(golden_run):
+def test_document_stamps_neutral_shell(golden_run):
+    # Phase 2B-M (bible 92): the single approved assertion change for the
+    # frozen pure-document suites — the internal render-model
+    # document.template value is now the one neutral shell. All bible 52
+    # golden VALUES remain untouched.
     document = golden_run["render_model"]["document"]
-    assert document["template"] == "solucionario_gradientes.tex.j2"
+    assert document["template"] == "solucionario.tex.j2"
 
 
 def test_all_successes_share_the_gradient_results_skeleton(golden_run):

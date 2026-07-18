@@ -16,6 +16,7 @@ from solucionario.ids import (
     group_mode,
     member_sequence,
     sort_exercises,
+    sort_key,
 )
 from solucionario.validation import validate_group
 
@@ -79,6 +80,36 @@ def test_sort_is_stable_for_equal_keys():
     first, second = make(1, "a", tag="first"), make(1, "a", tag="second")
     result = sort_exercises([first, second])
     assert [e["tag"] for e in result] == ["first", "second"]
+
+
+def test_sort_and_group_keys_ignore_solver_type():
+    """bible 65/92 (D1): solver identity never participates in any sorting
+    or grouping key — for recognized, unknown, non-string, and unhashable
+    authored type tokens alike."""
+    base = make(1, "a")
+    for token in ("gradient", "bogus", None, 7, [], {}):
+        variant = dict(base)
+        variant["type"] = token
+        assert group_key(variant) == group_key(base)
+        assert sort_key(variant) == sort_key(base)
+    absent = dict(base)
+    del absent["type"]
+    assert group_key(absent) == group_key(base)
+    assert sort_key(absent) == sort_key(base)
+
+
+def test_equal_key_members_of_different_types_keep_authored_order():
+    """bible 65 ordering guarantees: stable authored relative order for
+    identical complete structural keys is type-blind — sorting never
+    partitions or reorders by solver identity."""
+    integral = make(1, "a", tag="first")
+    gradient = dict(make(1, "a", tag="second"), type="gradient")
+    assert [e["tag"] for e in sort_exercises([integral, gradient])] == [
+        "first", "second",
+    ]
+    assert [e["tag"] for e in sort_exercises([gradient, integral])] == [
+        "second", "first",
+    ]
 
 
 def test_non_numeric_id_sorts_after_numeric_without_raising():

@@ -16,8 +16,10 @@ from pathlib import Path
 import pytest
 
 from solucionario import main as main_module
+from solucionario import pipeline as pipeline_module
 from solucionario.fileio import PdfCompilationError
 from solucionario.main import main
+from solucionario.render.latex import InternalRenderError
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -166,6 +168,32 @@ def test_exercise_errors_still_exit_zero(tmp_path, capsys):
     assert "1 error(s)" in capsys.readouterr().out
 
 
+def test_all_error_document_exits_zero_with_all_artifacts(tmp_path, capsys):
+    # bible 92 "All-error authored documents": authored academic failures
+    # alone are data outcomes — exit 0, Extended JSON + TeX written, PDF
+    # compilation attempted, member-based summary with successful: 0, one
+    # generic marker per standard-mode member.
+    second_broken = {**BROKEN_EXERCISE, "id": 10}
+    input_path = write_input(tmp_path, exercises=[BROKEN_EXERCISE, second_broken])
+    out_dir = tmp_path / "out"
+    compiler = fake_compiler()
+
+    code = main([str(input_path)], output_dir=out_dir, compile_pdf_func=compiler)
+
+    assert code == 0
+    extended = json.loads(
+        (out_dir / "itson_c3_hw_1_extended.json").read_text(encoding="utf-8")
+    )
+    summary = extended["metadata"]["processing_summary"]
+    assert summary["total_exercises"] == 2
+    assert summary["successful"] == 0
+    assert summary["errors"] == 2
+    tex = (out_dir / "itson_c3_hw_1.tex").read_text(encoding="utf-8")
+    assert tex.count("ERROR: no se pudo procesar este ejercicio.") == 2
+    assert compiler.calls == [out_dir / "itson_c3_hw_1.tex"]  # PDF attempted
+    assert "0/2 exercises solved, 2 error(s)" in capsys.readouterr().out
+
+
 # ---------------------------------------------------------------------------
 # pdflatex failure
 # ---------------------------------------------------------------------------
@@ -187,6 +215,57 @@ def test_pdflatex_failure_keeps_outputs_and_returns_nonzero(tmp_path, capsys):
     stderr = capsys.readouterr().err
     assert "pdflatex failed" in stderr
     assert "kept for debugging" in stderr
+
+
+# ---------------------------------------------------------------------------
+# Internal rendering failure (bible 92/55): clean nonzero CLI, no writer
+# invocation, pre-existing outputs byte-unchanged
+# ---------------------------------------------------------------------------
+
+def test_internal_render_failure_writes_nothing_and_preserves_outputs(
+    tmp_path, monkeypatch, capsys
+):
+    input_path = write_input(tmp_path)
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    # Pre-seeded outputs from an earlier run: an internal render failure may
+    # neither create nor overwrite ANY output file (bible 55, Phase 2B-M).
+    seeded = {
+        out_dir / "itson_c3_hw_1_extended.json": b'{"old": "extended"}',
+        out_dir / "itson_c3_hw_1.tex": b"% old tex",
+        out_dir / "itson_c3_hw_1.pdf": b"%PDF-old",
+    }
+    for path, content in seeded.items():
+        path.write_bytes(content)
+
+    def raising_render_tex(render_model, templates_dir=None):
+        raise InternalRenderError("forced internal failure at item 0")
+
+    # process_document renders fully in memory before main() writes anything;
+    # a renderer failure must therefore abort before ANY writer runs.
+    monkeypatch.setattr(pipeline_module, "render_tex", raising_render_tex)
+    monkeypatch.setattr(
+        main_module, "write_extended_json",
+        lambda *a, **k: pytest.fail("write_extended_json must not run"),
+    )
+    monkeypatch.setattr(
+        main_module, "write_tex",
+        lambda *a, **k: pytest.fail("write_tex must not run"),
+    )
+    compiler = fake_compiler()
+
+    code = main([str(input_path)], output_dir=out_dir, compile_pdf_func=compiler)
+
+    assert code == 1
+    stderr = capsys.readouterr().err
+    assert "ERROR: internal rendering failure" in stderr
+    assert "Traceback" not in stderr  # clean one-line report, no crash dump
+    assert compiler.calls == []
+    for path, content in seeded.items():
+        assert path.read_bytes() == content  # byte-preserved
+    assert sorted(p.name for p in out_dir.iterdir()) == sorted(
+        p.name for p in seeded
+    )  # nothing new appeared
 
 
 # ---------------------------------------------------------------------------

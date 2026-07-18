@@ -1,0 +1,24 @@
+\textbf{ {{ item.exercise_label }}) }
+
+{% for component in item.components %}
+\[
+\text{Componente {{ component.id_component }}: }
+{% if component.show_component_quantity %}{{ component.quantity_label }} = {% endif %}
+{{ component.solution_latex }}
+{% if component.show_numeric %} = {{ component.decimal_string }}{% endif %}
+\, \mathrm{ {{ component.units }} }
+\]
+{% endfor %}
+
+{% if item.show_component_total %}
+\[
+\text{Total: }
+{% if item.show_quantity %}{{ item.quantity_label }} = {% endif %}
+{% if item.show_component_symbolic %}{{ item.operation_latex }} = {% endif %}
+{{ item.total_latex }}
+{% if item.show_component_operation %} = {{ item.operation_decimal_string }}{% endif %}
+{% if item.show_numeric %} = {{ item.total_decimal_string }}{% endif %}
+\, \mathrm{ {{ item.units }} }
+\]
+{% endif %}
+

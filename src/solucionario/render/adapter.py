@@ -31,9 +31,16 @@ PIECE — show_<piece> = author flag AND piece present in results.gradient
 not null (gates only the decimal tail). Every gradient field is sourced from
 results.gradient, never top-level numeric_value/solution_latex; gradient is
 unitless with no quantity_label and declares no show_input/problem_latex
-(authored show_input is inert by construction). The document block carries
-the bible-85 "template" routing field, derived from the (validated
-single-solver) document's exercise types before any grouping.
+(authored show_input is inert by construction).
+
+Phase 2B-M (bible 85/92): the document block's "template" field is INTERNAL
+shell metadata — the adapter stamps the one neutral SHELL_NAME
+unconditionally; authored input can never set it (the document block is
+built exclusively from metadata). Standard-mode member dispatch goes through
+the closed, bounded _STANDARD_ITEM_BUILDERS mapping; a future solver adds
+exactly one entry. Component/output group display remains Integral-owned:
+the resolve_group_display call site passes exercise_type="integral"
+explicitly (behavior unchanged).
 """
 
 from solucionario.display import resolve_display, resolve_group_display
@@ -55,9 +62,17 @@ from solucionario.render.labels import (
     output_label,
     resolve_quantity_label,
 )
+from solucionario.render.latex import SHELL_NAME
 from solucionario.validation import validate_group
 
 ERROR_MESSAGE = "ERROR: no se pudo procesar este ejercicio."
+
+# bible 85/92 (Phase 2B-M): the adapter's emittable render-item kind set is
+# closed and DECLARED. The renderer's FRAGMENT_REGISTRY must cover it exactly
+# (mandatory architecture test; drift fails the suite).
+EMITTABLE_KINDS = frozenset(
+    {"standard", "component_group", "output_group", "gradient", "error"}
+)
 
 # bible 85, Document Label Derivation (authoritative maps).
 ASSIGNMENT_TYPE_LABELS = {
@@ -70,10 +85,6 @@ ASSIGNMENT_TYPE_LABELS = {
 COURSE_LABELS = {"Calculus 3": "Cálculo III"}
 
 SUBTITLE = "Solucionario"  # fixed Phase 1 string (bible 85)
-
-# bible 85, Template routing (by document solver; single-solver documents).
-INTEGRAL_TEMPLATE = "solucionario_integrales.tex.j2"
-GRADIENT_TEMPLATE = "solucionario_gradientes.tex.j2"
 
 # Bible-50 values used only if the provided defaults template is incomplete.
 _FALLBACKS = {
@@ -99,9 +110,9 @@ def build_render_model(extended_json: dict, display_defaults: dict) -> dict:
     """Canonical Extended JSON + hardcoded defaults -> closed render model."""
     exercises = extended_json.get("exercises") or []
     document = _document(extended_json.get("metadata") or {})
-    # Template routing field (bible 85): derived from the document's exercise
-    # type set BEFORE grouping/sorting — documents are single-solver (91).
-    document["template"] = _document_template(exercises)
+    # Internal shell metadata (bible 85, Phase 2B-M): always the one neutral
+    # shell; never derived from exercises, never authorable.
+    document["template"] = SHELL_NAME
 
     items: list[dict] = []
     for _key, members in group_exercises(exercises):
@@ -133,16 +144,6 @@ def _document(metadata: dict) -> dict:
     }
 
 
-def _document_template(exercises: list) -> str:
-    """bible 85: gradient documents use the gradient template; anything else
-    defaults to the integral template (Phase 1 back-compatible). The document
-    is validated single-solver (91), so any gradient exercise decides."""
-    for exercise in exercises:
-        if isinstance(exercise, dict) and exercise.get("type") == "gradient":
-            return GRADIENT_TEMPLATE
-    return INTEGRAL_TEMPLATE
-
-
 # ---------------------------------------------------------------------------
 # Items
 # ---------------------------------------------------------------------------
@@ -168,10 +169,9 @@ def _group_items(extended_json, display_defaults, members) -> list[dict]:
         for member in members:
             if _failed(member):
                 items.append(_error_item(exercise_label(member)))
-            elif member.get("type") == "gradient":
-                items.append(_gradient_item(extended_json, display_defaults, member))
             else:
-                items.append(_standard_item(extended_json, display_defaults, member))
+                builder = _standard_builder(member)
+                items.append(builder(extended_json, display_defaults, member))
         return items
     return [_error_item(label)]  # unclassifiable: defensive
 
@@ -278,11 +278,35 @@ def _gradient_item(extended_json, display_defaults, exercise) -> dict:
     return item
 
 
+# bible 92 IN-scope #5: the closed, bounded per-type item-builder mapping for
+# standard-mode members. A future solver registers exactly one entry; the
+# mapping is a literal, never populated dynamically.
+_STANDARD_ITEM_BUILDERS = {
+    "integral": _standard_item,
+    "gradient": _gradient_item,
+}
+
+
+def _standard_builder(member: dict):
+    """Select the standard-mode item builder for one solved member. The
+    string gate runs before the dict lookup so authored type tokens are
+    never hashed; anything outside the mapping keeps the Phase 1 integral
+    default (validated members always carry a recognized type)."""
+    member_type = member.get("type")
+    if isinstance(member_type, str) and member_type in _STANDARD_ITEM_BUILDERS:
+        return _STANDARD_ITEM_BUILDERS[member_type]
+    return _standard_item
+
+
 def _component_group_item(extended_json, display_defaults, members, label) -> dict:
     # Group-level resolution for ALL fields of a component group, including
     # component-line decimals and flags: per-member display_override is not
-    # honored inside component groups in Phase 1 (bible 85).
-    settings = resolve_group_display(display_defaults, extended_json)
+    # honored inside component groups in Phase 1 (bible 85). Integral owns
+    # component/output group display (bible 92): the exercise_type is passed
+    # EXPLICITLY at this call site.
+    settings = resolve_group_display(
+        display_defaults, extended_json, exercise_type="integral"
+    )
     decimal_places = _setting(settings, "decimal_places")
     quantity_label = resolve_quantity_label(members[0])  # uniform (validated)
     units = derive_units(quantity_label, settings)

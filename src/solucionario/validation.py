@@ -5,7 +5,9 @@ Phase 2A gradient matrix of bible/91_phase2a_gradient_scope_v3_2.md with the
 required-field rules of bible/80_json_input_spec_v3_2.md:
 
 - Document tier — validate_document() RAISES DocumentValidationError. The
-  caller must abort the whole run and write no output (bible 55).
+  caller must abort the whole run and write no output (bible 55). Envelope
+  rules only: since Phase 2B-M (bible 92) there is no document-tier
+  type-mixing rule — solver identity is a group-tier concern (D2, bible 65).
 - Exercise tier — validate_exercise() returns a diagnostic message or None.
   The caller marks that one exercise as ERROR and continues.
 - Group tier — validate_group() returns a diagnostic message or None for the
@@ -27,6 +29,38 @@ generic Spanish ERROR marker owned by the render adapter (bible 85).
 # Phase 1 integrals (bible 90) + Phase 2A gradient (bible 91). Anything else
 # is unknown — including the deferred "derivative" type of bible 09.
 KNOWN_TYPES = frozenset({"integral", "gradient"})
+
+# bible 65 "Supported-mode table" (single authoritative copy, owned by the
+# validation layer): the structural modes each recognized solver supports.
+# A future solver must add its row here EXPLICITLY.
+SUPPORTED_MODES = {
+    "integral": frozenset({"standard", "component", "output"}),
+    "gradient": frozenset({"standard"}),
+}
+
+
+def _recognized_identity(member: dict) -> str | None:
+    """bible 65 "Recognized solver identity": the member's type token when it
+    is a string in the closed active solver set, else None. Missing, null,
+    non-string, and unknown-string tokens have NO recognized identity — they
+    stay exercise-level authored failures. The string gate runs BEFORE the
+    frozenset membership test so unhashable authored tokens (e.g. [] or {})
+    never reach a hash operation."""
+    token = member.get("type")
+    if isinstance(token, str) and token in KNOWN_TYPES:
+        return token
+    return None
+
+
+def _member_mode(member: dict) -> str:
+    """The member's structural mode (bible 65): component / output /
+    standard. Assumes the both-fields coherence check already passed."""
+    if _has(member, "id_component"):
+        return "component"
+    if _has(member, "id_output"):
+        return "output"
+    return "standard"
+
 
 _BOUND_KEYS = ("var", "lower", "upper")
 
@@ -81,25 +115,6 @@ def validate_document(data) -> None:
                 problems.append(f"exercise at index {index} is not an object")
             elif not _has(exercise, "id"):
                 problems.append(f"exercise at index {index} is missing id")
-
-        # Phase 2A (bible 91): single-solver documents only — mixing
-        # type:"gradient" with any other PRESENT type is a hard stop (the
-        # template router is undefined for mixed documents). A missing type
-        # is not "another type": it stays an exercise-level ERROR.
-        # Equality scans only — authored type values may be unhashable
-        # (e.g. [] or {}), so no set/hash operation is safe here.
-        present_types = [
-            exercise.get("type")
-            for exercise in exercises
-            if isinstance(exercise, dict) and exercise.get("type") is not None
-        ]
-        has_gradient = any(value == "gradient" for value in present_types)
-        has_other_type = any(value != "gradient" for value in present_types)
-        if has_gradient and has_other_type:
-            problems.append(
-                "document mixes gradient with other exercise types "
-                "(single-solver documents only in Phase 2A)"
-            )
 
     if problems:
         raise DocumentValidationError("; ".join(problems))
@@ -238,17 +253,16 @@ def validate_group(members: list[dict]) -> str | None:
     `members` are all input exercises sharing one (id, id_letter). Returns
     None if the group structure is valid. Pure and stage-agnostic — see the
     module docstring.
+
+    Evaluation follows the bible 65 six-step precedence. Step 1 (per-member
+    exercise validation) runs in the pipeline and step 6 (group-versus-member
+    error cardinality) is applied by the render adapter; this function owns
+    steps 2-5 in order: structural-mode coherence -> D2 identity uniformity
+    -> supported-mode capability -> mode-specific rules. Identity comparison
+    uses equality scans only — authored type tokens may be unhashable.
     """
+    # Step 2 — structural-mode coherence over the full group.
     for member in members:
-        # Phase 2A (bible 91/65): gradient is standard-items-only; either
-        # grouping field on a gradient member errors the whole group.
-        if member.get("type") == "gradient" and (
-            _has(member, "id_component") or _has(member, "id_output")
-        ):
-            return (
-                "a gradient exercise carries id_component or id_output "
-                "(gradient is standard-items-only in Phase 2A)"
-            )
         if _has(member, "id_component") and _has(member, "id_output"):
             return "an exercise carries both id_component and id_output"
 
@@ -262,6 +276,26 @@ def validate_group(members: list[dict]) -> str | None:
     if modes_present > 1:
         return "group mixes standard/component/output modes"
 
+    # Step 3 — D2: one recognized solver identity per group (bible 65).
+    # Members without a recognized identity contribute nothing here; two
+    # equal unknown tokens never form a recognized identity.
+    identities: list[str] = []
+    for member in members:
+        identity = _recognized_identity(member)
+        if identity is not None and identity not in identities:
+            identities.append(identity)
+    if len(identities) > 1:
+        return "group mixes recognized solver identities: " + ", ".join(identities)
+
+    # Step 4 — solver structural capability (bible 65 supported-mode table).
+    for member in members:
+        identity = _recognized_identity(member)
+        if identity is not None:
+            mode = _member_mode(member)
+            if mode not in SUPPORTED_MODES[identity]:
+                return f"solver {identity!r} does not support {mode!r} structural mode"
+
+    # Step 5 — mode-specific structural rules.
     if component_members:
         problem = _check_sequence(
             [m["id_component"] for m in component_members], "id_component"

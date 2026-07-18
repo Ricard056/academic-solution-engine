@@ -192,18 +192,46 @@ def test_document_labels():
         "subtitle": "Solucionario",
         "course": "Cálculo III",
         "assignment_label": "Tarea 21",
-        # Phase 2A routing field (bible 85): integral documents keep the
-        # integral template.
-        "template": "solucionario_integrales.tex.j2",
+        # Internal shell metadata (bible 85, Phase 2B-M): the adapter stamps
+        # the one neutral shell unconditionally. This is the single approved
+        # assertion change for existing pure-document expectations (bible 92).
+        "template": "solucionario.tex.j2",
     }
 
 
 def test_document_template_for_gradient_documents():
+    # Phase 2B-M: gradient documents stamp the SAME neutral shell — the
+    # template field never varies by solver identity.
     document = model_for([solved_gradient(gradient_two_points())])["document"]
-    assert document["template"] == "solucionario_gradientes.tex.j2"
+    assert document["template"] == "solucionario.tex.j2"
     # The other document labels are solver-independent.
     assert document["title"] == "TAREA 21"
     assert document["subtitle"] == "Solucionario"
+
+
+def test_standard_item_builder_mapping_is_closed():
+    # bible 92 IN-scope #5: the bounded per-type builder mapping is a closed
+    # literal covering exactly the active standard-mode solvers.
+    from solucionario.render.adapter import (
+        _STANDARD_ITEM_BUILDERS,
+        _gradient_item,
+        _standard_item,
+    )
+
+    assert _STANDARD_ITEM_BUILDERS == {
+        "integral": _standard_item,
+        "gradient": _gradient_item,
+    }
+
+
+def test_component_group_display_resolves_via_display_integral():
+    # bible 92 IN-scope #7 (G10): Integral owns component/output group
+    # display; the explicit exercise_type="integral" call site must keep
+    # honoring the document's display_integral block (behavior unchanged).
+    model = model_for(ex5_components(), display_integral={"show_component_total": False})
+    (item,) = model["items"]
+    assert item["kind"] == "component_group"
+    assert item["show_component_total"] is False
 
 
 def test_document_unmapped_fallbacks():
