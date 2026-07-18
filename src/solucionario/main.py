@@ -8,7 +8,9 @@ and before any writing -> in-memory pipeline -> write Extended JSON + TEX
 Exit codes: 0 = document processed and PDF compiled (exercise-level and
 group-level ERROR items are NOT CLI failures; they show up in the summary
 and processing_summary); 1 = unreadable/invalid input file, document hard
-stop, or pdflatex failure; 2 = argparse usage error (argparse default).
+stop, internal rendering failure (bible 92: reported cleanly, nothing
+written, pre-existing outputs untouched), or pdflatex failure; 2 = argparse
+usage error (argparse default).
 
 output_dir and compile_pdf_func are TEST-ONLY injection points (keyword
 arguments, never CLI flags): output_dir resolves to fileio.OUTPUTS_DIR at
@@ -30,6 +32,7 @@ from solucionario.fileio import (
     write_tex,
 )
 from solucionario.pipeline import process_document
+from solucionario.render.latex import InternalRenderError
 from solucionario.validation import DocumentValidationError, validate_document
 
 
@@ -73,6 +76,12 @@ def main(argv=None, *, output_dir=None, compile_pdf_func=None) -> int:
     except DocumentValidationError as exc:
         # Defensive re-validation inside process_document; still no outputs.
         print(f"ERROR: document validation failed: {exc}", file=sys.stderr)
+        return 1
+    except InternalRenderError as exc:
+        # bible 92/55: internal rendering failure — a system defect, never an
+        # academic outcome. process_document raised before returning, so
+        # nothing has been written and nothing may be written now.
+        print(f"ERROR: internal rendering failure: {exc}", file=sys.stderr)
         return 1
 
     base = info["filename_base"]

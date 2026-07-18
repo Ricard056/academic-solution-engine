@@ -17,13 +17,15 @@ rendered LaTeX. Internal failures are deterministic InternalRenderError with
 per-item attribution (index, exercise_label, kind, fragment) and are never
 converted to academic ERROR items (bible 92 trust boundaries).
 
-Migration-window routing (bible 85, Phase 2A — removed at Phase 2B-M
-closeout): the template is selected EXCLUSIVELY by
+Shell selection (bible 85 shell metadata semantics, production since the
+Phase 2B-M cutover): the shell is selected EXCLUSIVELY by
 render_model["document"]["template"] — never inferred from items or exercise
-data. An absent key defaults to the legacy integral template (Phase 1 render
-models carry no template field and must render byte-identically);
-SHELL_NAME routes to the universal path; a present but unknown/None/empty
-value raises ValueError deterministically, never a silent fallback.
+data. An absent key means the one default neutral shell (Phase 1 render
+models carry no template field); a present but null/non-string/unknown value
+is a deterministic InternalRenderError, never a silent fallback.
+Migration-window exception (removed at Phase 2B-M closeout): the two legacy
+full-document template names remain renderable for test/comparison use only
+— the production adapter never emits them after cutover.
 
 String-out only: no file writing, no output paths, no pdflatex — those are
 pipeline/fileio responsibilities (M7B). The optional templates_dir parameter
@@ -81,28 +83,17 @@ def render_tex(render_model: dict, templates_dir=TEMPLATES_DIR) -> str:
         undefined=StrictUndefined,
         autoescape=False,
     )
-    name = _template_name(render_model["document"])
-    if name in KNOWN_SHELLS:
-        return _render_universal(render_model, environment)
-    template = environment.get_template(name)
-    return template.render(
-        document=render_model["document"],
-        items=render_model["items"],
-    )
-
-
-def _template_name(document: dict) -> str:
-    """Migration-window router (deleted at Phase 2B-M closeout): select by
-    document["template"] alone. Absent key -> legacy integral template
-    (Phase 1 back-compat); SHELL_NAME -> universal path; legacy names ->
-    legacy full-document path; anything else (including None/"") ->
-    deterministic ValueError, no silent fallback."""
-    if "template" not in document:
-        return TEMPLATE_NAME
-    name = document["template"]
-    if isinstance(name, str) and (name in KNOWN_TEMPLATES or name in KNOWN_SHELLS):
-        return name
-    raise ValueError(f"unknown render template: {name!r}")
+    # Migration-window legacy branch (bible 92, deleted in the Batch F
+    # deletion commit): the legacy full-document templates stay renderable
+    # for test/comparison use only — production never stamps these names.
+    name = render_model["document"].get("template")
+    if isinstance(name, str) and name in KNOWN_TEMPLATES:
+        template = environment.get_template(name)
+        return template.render(
+            document=render_model["document"],
+            items=render_model["items"],
+        )
+    return _render_universal(render_model, environment)
 
 
 # ---------------------------------------------------------------------------

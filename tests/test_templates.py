@@ -7,11 +7,16 @@ standard items only (P8), no leading "=" in the numeric-only output branch
 (P7), total_latex under show_component_total (P9), StrictUndefined on every
 render path, string-out-only behavior (no disk writes, no subprocess).
 
-Phase 2A adds the template-routing section (select exclusively by
-document["template"]; absent -> integral back-compat; present-but-invalid ->
-deterministic error) and the gradient template section (six pieces in
-contract order, per-piece show_*/*_numeric gating, error branch reading only
-exercise_label/message, no units/quantity/problem_latex ever rendered).
+Phase 2B-M: models without a template key (and models stamped with the
+neutral SHELL_NAME) render through the universal shell/fragment path, which
+reproduces the legacy presentation contract byte-for-byte — so every
+contract lock below now exercises the production fragments. Shell routing:
+select exclusively by document["template"]; absent -> the neutral shell;
+present-but-invalid -> deterministic InternalRenderError. The gradient
+section keeps the Phase 2A contract locks (six pieces in contract order,
+per-piece show_*/*_numeric gating, error branch reading only
+exercise_label/message, no units/quantity/problem_latex ever rendered),
+now rendered through the universal path.
 """
 
 import ast
@@ -22,7 +27,7 @@ import pytest
 from jinja2.exceptions import UndefinedError
 
 from solucionario.render import latex
-from solucionario.render.latex import render_tex
+from solucionario.render.latex import InternalRenderError, render_tex
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -116,7 +121,9 @@ def render(*items) -> str:
     return render_tex({"document": DOCUMENT, "items": list(items)})
 
 
-GRADIENT_DOCUMENT = {**DOCUMENT, "template": "solucionario_gradientes.tex.j2"}
+# Phase 2B-M: gradient models render through the same universal path — no
+# solver-specific template key (the adapter stamps the neutral shell).
+GRADIENT_DOCUMENT = dict(DOCUMENT)
 
 
 def gradient_item(**overrides) -> dict:
@@ -287,10 +294,14 @@ def test_error_item_renders_generic_spanish_marker_in_red():
 # ---------------------------------------------------------------------------
 
 def test_missing_declared_field_raises_strict_undefined():
+    # Universal path (bible 85): the StrictUndefined failure surfaces as a
+    # deterministic InternalRenderError with the UndefinedError preserved as
+    # its cause.
     incomplete = standard_item()
     del incomplete["units"]
-    with pytest.raises(UndefinedError):
+    with pytest.raises(InternalRenderError) as excinfo:
         render(incomplete)
+    assert isinstance(excinfo.value.__cause__, UndefinedError)
 
 
 def test_render_tex_returns_str():
@@ -315,23 +326,28 @@ def test_latex_module_imports_no_subprocess_or_os():
 
 
 # ---------------------------------------------------------------------------
-# Template routing (bible 85, Phase 2A): document.template selects, nothing
-# else — absent defaults to integral; present-but-invalid fails loudly
+# Shell routing (bible 85, Phase 2B-M): document.template selects, nothing
+# else — absent defaults to the neutral shell; present-but-invalid fails as
+# a deterministic internal failure
 # ---------------------------------------------------------------------------
 
-def test_missing_template_key_defaults_to_integral():
-    # DOCUMENT has no "template" key: the Phase 1 legacy path.
+def test_missing_template_key_defaults_to_neutral_shell():
+    # DOCUMENT has no "template" key: the universal production path renders
+    # through the neutral shell and the standard fragment.
     tex = render(standard_item())
-    assert "A = 1 = 1.0000" in tex  # integral standard branch rendered
+    assert "A = 1 = 1.0000" in tex  # standard fragment rendered
 
 
 def test_explicit_integral_template_is_byte_identical_to_default():
-    legacy = render_tex({"document": DOCUMENT, "items": [standard_item()]})
-    explicit = render_tex({
+    # Migration-window smoke lock (retired with the legacy template in Batch
+    # F): the legacy integral full-document template still renders and stays
+    # byte-identical to the universal default path.
+    legacy = render_tex({
         "document": {**DOCUMENT, "template": "solucionario_integrales.tex.j2"},
         "items": [standard_item()],
     })
-    assert explicit == legacy
+    default = render_tex({"document": DOCUMENT, "items": [standard_item()]})
+    assert default == legacy
 
 
 @pytest.mark.parametrize(
@@ -339,15 +355,15 @@ def test_explicit_integral_template_is_byte_identical_to_default():
 )
 def test_present_but_invalid_template_fails_deterministically(bad):
     model = {"document": {**DOCUMENT, "template": bad}, "items": []}
-    with pytest.raises(ValueError, match="unknown render template"):
+    with pytest.raises(InternalRenderError, match="invalid document shell metadata"):
         render_tex(model)
 
 
 def test_base_template_is_not_an_accepted_routing_target():
-    # A real file under templates/ is still rejected: the router accepts the
-    # two known template names, not anything loadable.
+    # A real file under templates/ is still rejected: the shell allowlist
+    # accepts the known shell identifiers, not anything loadable.
     model = {"document": {**DOCUMENT, "template": "base.tex.j2"}, "items": []}
-    with pytest.raises(ValueError, match="unknown render template"):
+    with pytest.raises(InternalRenderError, match="invalid document shell metadata"):
         render_tex(model)
 
 
@@ -444,15 +460,21 @@ def test_gradient_template_reads_only_declared_fields():
 
 
 def test_gradient_template_strict_undefined_on_missing_field():
+    # Universal path (bible 85): wrapped as InternalRenderError, cause kept.
     incomplete = gradient_item()
     del incomplete["magnitude_decimal_string"]
-    with pytest.raises(UndefinedError):
+    with pytest.raises(InternalRenderError) as excinfo:
         render_gradient(incomplete)
+    assert isinstance(excinfo.value.__cause__, UndefinedError)
 
 
 def test_gradient_template_ignores_other_item_kinds():
-    # Only kind == "gradient" and kind == "error" render; anything else is
-    # skipped (mixed documents are hard-stopped far upstream, bible 91).
-    tex = render_gradient(standard_item())
+    # LEGACY full-document template behavior (migration window only; this
+    # test is retired together with the template in Batch F): the legacy
+    # gradient template renders only kind == "gradient" / "error" branches.
+    tex = render_tex({
+        "document": {**DOCUMENT, "template": "solucionario_gradientes.tex.j2"},
+        "items": [standard_item()],
+    })
     assert "PROBLEMMARKER" not in tex
     assert "A = 1" not in tex
