@@ -1,0 +1,18 @@
+\textbf{ {{ item.exercise_label }}) }
+
+{% for output in item.outputs %}
+{% if output.show_symbolic and output.show_numeric %}
+\[
+\text{ {{ output.output_label }}: }{% if output.show_quantity %}{{ output.quantity_label }} = {% endif %}{{ output.solution_latex }} = {{ output.decimal_string }}\, \mathrm{ {{ output.units }} }
+\]
+{% elif output.show_symbolic %}
+\[
+\text{ {{ output.output_label }}: }{% if output.show_quantity %}{{ output.quantity_label }} = {% endif %}{{ output.solution_latex }}\, \mathrm{ {{ output.units }} }
+\]
+{% elif output.show_numeric %}
+\[
+\text{ {{ output.output_label }}: }{% if output.show_quantity %}{{ output.quantity_label }} = {% endif %}{{ output.decimal_string }}\, \mathrm{ {{ output.units }} }
+\]
+{% endif %}
+{% endfor %}
+

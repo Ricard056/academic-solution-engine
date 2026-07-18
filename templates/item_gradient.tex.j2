@@ -1,0 +1,38 @@
+\textbf{ {{ item.exercise_label }}) }
+
+{% if item.show_gradient %}
+\[
+\nabla f(x, y) = {{ item.gradient_latex }}
+\]
+{% endif %}
+
+{% if item.show_gradient_evaluated %}
+\[
+\nabla f(P) = {{ item.gradient_evaluated_latex }}{% if item.gradient_evaluated_numeric %} = {{ item.gradient_evaluated_decimal }}{% endif %}
+\]
+{% endif %}
+
+{% if item.show_magnitude %}
+\[
+\left| \nabla f(P) \right| = {{ item.magnitude_latex }}{% if item.magnitude_numeric %} = {{ item.magnitude_decimal_string }}{% endif %}
+\]
+{% endif %}
+
+{% if item.show_unit_vector %}
+\[
+\hat{u} = {{ item.unit_vector_latex }}{% if item.unit_vector_numeric %} = {{ item.unit_vector_decimal }}{% endif %}
+\]
+{% endif %}
+
+{% if item.show_directional_derivative %}
+\[
+D_{\hat{u}} f = {{ item.directional_derivative_latex }}{% if item.directional_derivative_numeric %} = {{ item.directional_derivative_decimal_string }}{% endif %}
+\]
+{% endif %}
+
+{% if item.show_theta_max %}
+\[
+\theta_{\max} = {{ item.theta_max_latex }}{% if item.theta_max_numeric %} = {{ item.theta_max_decimal_string }}{% endif %}
+\]
+{% endif %}
+

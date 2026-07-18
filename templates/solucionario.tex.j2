@@ -1,0 +1,23 @@
+{% extends "base.tex.j2" %}
+
+{% block body %}
+
+\begin{center}
+{\Large \textbf{ {{ document.title }} }}\\
+{\large {{ document.subtitle }}}\\
+{% if document.course %}{{ document.course }}{% endif %}
+\end{center}
+
+\vspace{0.5cm}
+
+\section*{Resultados}
+
+{% for body in rendered_items %}
+
+
+{{ body }}
+
+
+{% endfor %}
+
+{% endblock %}

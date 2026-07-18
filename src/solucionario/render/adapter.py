@@ -59,6 +59,13 @@ from solucionario.validation import validate_group
 
 ERROR_MESSAGE = "ERROR: no se pudo procesar este ejercicio."
 
+# bible 85/92 (Phase 2B-M): the adapter's emittable render-item kind set is
+# closed and DECLARED. The renderer's FRAGMENT_REGISTRY must cover it exactly
+# (mandatory architecture test; drift fails the suite).
+EMITTABLE_KINDS = frozenset(
+    {"standard", "component_group", "output_group", "gradient", "error"}
+)
+
 # bible 85, Document Label Derivation (authoritative maps).
 ASSIGNMENT_TYPE_LABELS = {
     "hw": "Tarea",

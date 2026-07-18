@@ -79,3 +79,20 @@ def test_render_adapter_does_not_compute_math():
         or module.startswith("solucionario.aggregation")
     ]
     assert offenders == []
+
+
+def test_fragment_registry_covers_emittable_kinds_exactly():
+    """Mandatory exact-coverage test (bible 85/92, Phase 2B-M): the closed
+    fragment registry must cover the adapter's declared emittable kind set
+    EXACTLY — any drift in either direction fails the suite — and every
+    registry fragment file must exist under templates/."""
+    # Runtime imports (not AST): this guard pins the live declared constants.
+    from solucionario.render.adapter import EMITTABLE_KINDS
+    from solucionario.render.latex import FRAGMENT_REGISTRY, TEMPLATES_DIR
+
+    assert set(FRAGMENT_REGISTRY) == set(EMITTABLE_KINDS)
+    missing = [
+        name for name in FRAGMENT_REGISTRY.values()
+        if not (TEMPLATES_DIR / name).is_file()
+    ]
+    assert missing == []
