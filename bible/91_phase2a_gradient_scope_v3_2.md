@@ -201,6 +201,13 @@ Input JSON
 → PDF
 ```
 
+> **Phase 2B-M supersession note — derivative of the first counted clause:**
+> The `gradient template, selected by router` pipeline step above is retained as a
+> Phase-2A historical summary of the already-counted single-solver rendering
+> restriction annotated under “Render / templates.” It is not a fourth
+> independently superseded clause. Current production rendering uses the neutral
+> shell plus closed item-fragment contract of bible 85 under bible 92.
+
 Each solver step is independent (99 #5): the gradient solver adds no dependency on
 the integral solver, and vice versa.
 

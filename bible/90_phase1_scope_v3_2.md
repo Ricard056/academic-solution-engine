@@ -51,7 +51,9 @@ symbolic path never accepts one.
   No rounding, no units.
 - Render Adapter = all formatted decimals (`decimal_string`,
   `total_decimal_string`, `operation_decimal_string`) and `units`.
-- Template = render only; StrictUndefined in dev/test.
+- Template = render only; StrictUndefined in dev/test. **Current production
+  authority:** bible 85 also requires `StrictUndefined` for the universal
+  production renderer.
 - Extended JSON carries NO formatted decimals and NO units.
 
 ### Quantity Auto-Inference
@@ -170,10 +172,20 @@ debug logging in Phase 1.
 - Required bible file: `85_render_adapter_and_jinja2_spec_v3_2.md`
 - Required render adapter function: `build_render_model(extended_json, defaults) -> render_model`
 - Jinja2 must remain simple and must not perform solver/display/grouping/formatting logic
-- Templates rendered with StrictUndefined in dev/test
+- Templates rendered with StrictUndefined in dev/test. **Current production
+  authority:** bible 85 also requires `StrictUndefined` for the universal
+  production renderer.
 - Required templates:
   - `templates/base.tex.j2`
   - `templates/solucionario_integrales.tex.j2`
+
+> **SUPERSEDED production-template status (Phase 2B-M):** The Phase-1
+> requirement above is retained as milestone history.
+> `templates/solucionario_integrales.tex.j2` became a temporary migration oracle
+> and was deleted at Phase 2B-M closeout. Current production rendering is the
+> universal neutral-shell plus closed item-fragment path controlled by bible 85;
+> the legacy-template lifecycle is controlled by bible 92. Do not restore the
+> legacy full-document template as a production path.
 
 ### Test Data and Golden Reference
 - `45_test_data_T21_v3_2.json`: 17 integral entries with `id_letter` and `display_override` examples
@@ -205,6 +217,10 @@ transformation (see 60); its ERROR status is a pass, not a bug.
 - Derivative solver (see `09_deferred_solvers_v3_2.md`)
 - Vector solver (future)
 
+> **Later activation (Phase 2A):** The Gradient entry above is retained as
+> Phase-1 milestone history. Gradient is active under bible 91; Derivative and
+> Vector remain deferred.
+
 ### Deferred Display Fields
 - `show_interpretations` and the `interpretation` field schema
 - `show_id_component_process`
@@ -213,6 +229,11 @@ transformation (see 60); its ERROR status is a pass, not a bug.
 - `show_all`
 - `display_gradient`, `display_derivative` (all solver-specific fields)
 - Per-solver default config files (e.g., `50_config_defaults_integral.json`)
+
+> **Later activation (Phase 2A):** `display_gradient` is active under bibles 70
+> and 91, with defaults in bible 50. `display_derivative` and per-solver default
+> config files remain deferred. The Phase-1 list above is retained as milestone
+> history.
 
 ### Deferred Features
 - Performance optimization

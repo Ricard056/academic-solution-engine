@@ -119,13 +119,19 @@ config/display_defaults/
 
 global defaults → solver defaults file → input display_default → input display_[solver] → display_override
 
-**Priority**: Not needed until multiple solvers are active. Phase 1 only has
-integrals, so the global defaults + `display_integral` in input JSON is
-sufficient.
+**Priority**: Still deferred after Phase 2B-M. Multiple solvers are active, but
+the current display contract intentionally uses one global hardcoded defaults
+file plus the top-level `display_default` and `display_[solver]` blocks. Phase
+2B-M expressly keeps per-solver config files out of scope (92); revisit only
+through a separately approved future feature.
 
 ---
 
 ## CLAUDE.md (Project Index for IDE)
+
+> **Current status**: COMPLETED. Root `CLAUDE.md` now exists as a navigation
+> map only; it is not normative authority. The original concept, creation timing,
+> and suggested content below are retained as historical planning context.
 
 **Concept**: A single file at the project root that helps Claude (in Claude Code
 or VSC) understand the project structure quickly.

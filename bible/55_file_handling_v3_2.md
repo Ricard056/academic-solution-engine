@@ -109,6 +109,12 @@ Original input remains untouched
 
 ## Folder Structure
 
+> **Illustrative historical layout only.** The diagram below records the intended
+> v3.2-era organization; it is not a normative or current repository-tree
+> contract. Exact internal paths and implementation filenames are implementation
+> precision. The normative rules in this file are the input/output safety,
+> failure, and naming behaviors above and below.
+
 ```
 project_root/
 ├── inputs/              # User-created JSON (read-only)

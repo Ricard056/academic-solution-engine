@@ -87,7 +87,8 @@ or unreliable copy-paste from computational tools.
 
 ## Future Possibilities (Not MVP)
 
-- Additional solvers: derivatives, gradients, vectors, series
+- Additional solvers or solver extensions: derivatives, 3D/non-Cartesian
+  gradient extensions, vectors, series
 - Frontend for JSON creation
 - Integration with learning management systems
 

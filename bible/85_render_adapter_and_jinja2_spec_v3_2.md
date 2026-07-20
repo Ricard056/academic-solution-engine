@@ -110,10 +110,11 @@ The adapter receives Extended JSON and returns a render model. It must:
    - `display_{exercise.type}` (e.g. `display_integral`, `display_gradient`)
    - `display_override`
 
-   Group-level display for `component_group`/`output_group` items still
-   resolves from the merged hardcoded → `display_default` → `display_integral`
-   chain: component and output groups remain Integral-only capabilities
-   (supported-mode table, bible 65).
+   Group-level display for `component_group`/`output_group` items executes the
+   grouped Integral display-resolution semantics owned by bible 70. Component
+   and output groups remain Integral-only capabilities (supported-mode table,
+   bible 65); the adapter consumes the resolved group-level settings while
+   assembling the closed render item.
 
 5. Resolve quantity label:
    - `display_override.quantity_label` if present
@@ -372,13 +373,13 @@ breakdown's purpose is to show each part's exact value. Symbolic/decimal
 gated by the global `show_symbolic`. This intentional difference from `standard`
 items is by design.
 
-**Group-level display resolution (Phase 1):** Group-level display fields on a
-`component_group` — `show_quantity`, `show_numeric`, the four `show_component_*`
-flags, and the `decimal_places` used for `total_decimal_string` and
-`operation_decimal_string` — resolve from the merged
-hardcoded/`display_default`/`display_integral` config for the `(id, id_letter)`
-group; per-component `display_override` is not honored for group-level fields in
-Phase 1.
+**Group-level display execution (Phase 1):** When assembling a
+`component_group`, the adapter executes the grouped Integral display-resolution
+semantics owned by bible 70. It consumes the group-level settings resolved for
+the `(id, id_letter)` group and populates `show_quantity`, `show_numeric`, the
+four `show_component_*` flags, plus the `decimal_places`-derived
+`total_decimal_string` and `operation_decimal_string`. Per-component
+`display_override` does not become a group-level override.
 
 ### 3. Output Group
 

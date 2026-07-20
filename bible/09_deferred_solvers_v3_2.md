@@ -94,7 +94,17 @@ These have no specification yet:
 - **Vector solver**: Vector operations, cross products, etc.
 - **Series solver**: Taylor/Maclaurin series, convergence tests
 
-When adding any new solver:
+> **SUPERSEDED as current registration guidance (Phase 2B-M).** The checklist
+> below is retained only as historical planning context. Do not use it as the
+> process for adding a solver. The exhaustive current bounded registration path
+> is in `92_phase2bm_multisolver_scope_v3_2.md`; supported structural modes are
+> declared in the single table owned by `65_id_system_v3_2.md`; presentation-
+> contract reuse and any new render-kind/fragment/registry registration are
+> controlled by `85_render_adapter_and_jinja2_spec_v3_2.md`. A future solver
+> reuses an existing presentation contract when it fits and adds a fragment and
+> registry entry only for a genuinely new presentation contract.
+>
+> **Historical checklist (non-controlling):**
 1. Create exercise examples in this file or a new deferred file
 2. Define results structure following the same pattern as above (raw floats +
    LaTeX; adapter owns formatting)

@@ -74,6 +74,22 @@ if 'display_override' in exercise:
 fields inherit from the previous level. This merge is performed by the Render
 Adapter, not by the solver or the template.
 
+### Grouped Integral Display Resolution
+
+Component and output grouping are Integral-only capabilities (65). For a
+`component_group` or `output_group`, group-level display settings resolve once
+for the `(id, id_letter)` group through:
+
+`hardcoded defaults → display_default → display_integral`
+
+Per-member `display_override` does not override group-level fields. For a
+`component_group`, this rule governs `show_quantity`, `show_numeric`, the four
+`show_component_*` fields, and the `decimal_places` used for
+`total_decimal_string` and `operation_decimal_string`.
+
+Bible 85 owns adapter execution and closed render-item assembly for this
+display-semantic rule; it does not define a separate merge policy.
+
 ### Resolution Example
 
 ```json
